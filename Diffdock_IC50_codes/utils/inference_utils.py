@@ -1,6 +1,7 @@
 import copy
 import os
 import pickle
+import numpy as np
 
 import torch
 from Bio.PDB import PDBParser
@@ -51,17 +52,25 @@ def set_nones(l):
     return [s if str(s) != 'nan' else None for s in l]
 
 
-def get_sequences(protein_files, protein_sequences):
+def get_sequences(protein_files, protein_sequences, prefer_pdb: bool = False):
     """Return the sequence for each complex.
 
-    If a sequence is explicitly provided, use it. Otherwise extract the
-    sequence from the PDB file. This prioritises user provided sequences
-    over sequences parsed from PDB files.
+    Parameters
+    ----------
+    protein_files : list[str]
+        Paths to protein pdb files.
+    protein_sequences : list[str]
+        Optional sequences provided by the user.
+    prefer_pdb : bool, default False
+        If True, use the sequence extracted from the pdb file whenever
+        a pdb path is available. Otherwise prefer the provided sequence.
     """
 
     new_sequences = []
     for pdb_file, seq in zip(protein_files, protein_sequences):
-        if seq is not None:
+        if prefer_pdb and pdb_file is not None:
+            new_sequences.append(get_sequences_from_pdbfile(pdb_file))
+        elif seq is not None:
             new_sequences.append(seq)
         elif pdb_file is not None:
             new_sequences.append(get_sequences_from_pdbfile(pdb_file))
@@ -164,29 +173,41 @@ class InferenceDataset(Dataset):
             if torch.cuda.is_available():
                 model = model.cuda()
 
-            protein_sequences = get_sequences(protein_files, protein_sequences)
+            docking_sequences = get_sequences(protein_files, protein_sequences, prefer_pdb=True)
+            save_sequences = get_sequences(protein_files, protein_sequences, prefer_pdb=False)
+
             labels, sequences = [], []
-            for i in range(len(protein_sequences)):
-                s = protein_sequences[i].split(':')
+            for i in range(len(docking_sequences)):
+                s = docking_sequences[i].split(':')
                 sequences.extend(s)
-                # labels.extend([complex_names[i] + '_chain_' + str(j) for j in range(len(s))])
                 labels.extend([f'{complex_names[i]}chain{j}' for j in range(len(s))])
+            docking_embeds, _ = compute_ESM_embeddings(model, alphabet, labels, sequences)
 
-            lm_embeddings, cls_tokens = compute_ESM_embeddings(model, alphabet, labels, sequences)
+            labels, sequences = [], []
+            for i in range(len(save_sequences)):
+                s = save_sequences[i].split(':')
+                sequences.extend(s)
+                labels.extend([f'{complex_names[i]}chain{j}' for j in range(len(s))])
+            save_embeds, cls_tokens = compute_ESM_embeddings(model, alphabet, labels, sequences)
 
-            self.lm_embeddings = []
+            self.model_embeddings = []
+            self.save_embeddings = []
             self.cls_embeddings = []
-            for i in range(len(protein_sequences)):
-                s = protein_sequences[i].split(':')
-                self.lm_embeddings.append([lm_embeddings[f'{complex_names[i]}chain{j}'] for j in range(len(s))])
-                self.cls_embeddings.append([cls_tokens[f'{complex_names[i]}chain{j}'] for j in range(len(s))])
+            for i in range(len(docking_sequences)):
+                d_chains = docking_sequences[i].split(':')
+                s_chains = save_sequences[i].split(':')
+                self.model_embeddings.append([docking_embeds[f'{complex_names[i]}chain{j}'] for j in range(len(d_chains))])
+                self.save_embeddings.append([save_embeds[f'{complex_names[i]}chain{j}'] for j in range(len(s_chains))])
+                self.cls_embeddings.append([cls_tokens[f'{complex_names[i]}chain{j}'] for j in range(len(s_chains))])
 
         elif not lm_embeddings:
-            self.lm_embeddings = [None] * len(self.complex_names)
+            self.model_embeddings = [None] * len(self.complex_names)
+            self.save_embeddings = [None] * len(self.complex_names)
             self.cls_embeddings = [None] * len(self.complex_names)
 
         else:
-            self.lm_embeddings = precomputed_lm_embeddings
+            self.model_embeddings = precomputed_lm_embeddings
+            self.save_embeddings = precomputed_lm_embeddings
             self.cls_embeddings = [None] * len(self.complex_names)
 
         # generate structures with ESMFold
@@ -210,7 +231,8 @@ class InferenceDataset(Dataset):
         name = self.complex_names[idx]
         protein_file = self.protein_files[idx]
         ligand_description = self.ligand_descriptions[idx]
-        lm_embedding = self.lm_embeddings[idx]
+        model_embedding = self.model_embeddings[idx]
+        save_embedding = self.save_embeddings[idx]
         cls_embedding = self.cls_embeddings[idx] if hasattr(self, 'cls_embeddings') else None
 
         # build the pytorch geometric heterogeneous graph
@@ -246,11 +268,14 @@ class InferenceDataset(Dataset):
                 complex_graph=complex_graph,
                 neighbor_cutoff=self.receptor_radius,
                 max_neighbors=self.c_alpha_max_neighbors,
-                lm_embeddings=lm_embedding,
+                lm_embeddings=model_embedding,
                 knn_only_graph=self.knn_only_graph,
                 all_atoms=self.all_atoms,
                 atom_cutoff=self.atom_radius,
                 atom_max_neighbors=self.atom_max_neighbors)
+
+            if save_embedding is not None:
+                complex_graph['receptor'].input_lm_embeddings = torch.tensor(np.concatenate(save_embedding, axis=0))
 
             if cls_embedding is not None:
                 complex_graph['receptor'].cls_embedding = torch.stack(
