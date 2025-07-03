@@ -84,20 +84,44 @@ def main(args: Namespace) -> None:
             model_args=score_model_args,
         )
 
-        ligand_pos = (
-            final_complex_graph['ligand'].pos.cpu().numpy() + orig_complex_graph.original_center.cpu().numpy()
-        )
+        ligand_pos = [
+            complex_graph['ligand'].pos.cpu().numpy() + orig_complex_graph.original_center.cpu().numpy()
+            for complex_graph in data_list
+        ]
+
+        if confidence is not None:
+            if confidence.dim() > 1:
+                confidence = confidence[:, 0]
+            confidence = confidence.cpu().numpy()
+            order = np.argsort(confidence)[::-1]
+            confidence = confidence[order]
+            ligand_pos = [ligand_pos[i] for i in order]
+        else:
+            confidence = [float('nan')] * len(ligand_pos)
 
         write_dir = os.path.join(args.out_dir, args.complex_name)
         os.makedirs(write_dir, exist_ok=True)
         mol_pred = copy.deepcopy(orig_complex_graph.mol[0])
         if score_model_args.remove_hs:
             mol_pred = RemoveAllHs(mol_pred)
-        write_mol_with_coords(mol_pred, ligand_pos, os.path.join(write_dir, 'rank1.sdf'))
+        for rank, pos in enumerate(ligand_pos):
+            write_mol_with_coords(
+                mol_pred,
+                pos,
+                os.path.join(write_dir, f'rank{rank+1}_confidence{confidence[rank]:.2f}.sdf'),
+            )
 
-        np.save(os.path.join(write_dir, 'ligand_embedding.npy'), final_embedding.cpu().numpy())
+        np.save(os.path.join(write_dir, 'complex_embedding.npy'), final_embedding.cpu().numpy())
         if hasattr(orig_complex_graph['receptor'], 'lm_embeddings'):
-            np.save(os.path.join(write_dir, 'receptor_embedding.npy'), orig_complex_graph['receptor'].lm_embeddings.cpu().numpy())
+            np.save(
+                os.path.join(write_dir, 'receptor_embedding.npy'),
+                orig_complex_graph['receptor'].lm_embeddings.cpu().numpy(),
+            )
+            if hasattr(orig_complex_graph['receptor'], 'cls_embedding'):
+                cls_emb = orig_complex_graph['receptor'].cls_embedding
+                if cls_emb.dim() > 1:
+                    cls_emb = cls_emb.mean(dim=0, keepdim=True)
+                np.save(os.path.join(write_dir, 'receptor_cls_embedding.npy'), cls_emb.cpu().numpy())
 
 
 if __name__ == '__main__':
