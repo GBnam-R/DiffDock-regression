@@ -1,4 +1,4 @@
-name: diffdock_test_2
+name: diffdock
 channels:
   - pyg
   - nvidia
