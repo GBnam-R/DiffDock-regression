@@ -196,7 +196,12 @@ def new_extract_receptor_structure(seq, all_coords, complex_graph, neighbor_cuto
     node_feat = torch.tensor(feature_list, dtype=torch.float32)
 
     lm_embeddings = torch.tensor(np.concatenate(lm_embeddings, axis=0)) if lm_embeddings is not None else None
-    complex_graph['receptor'].x = torch.cat([node_feat, lm_embeddings], axis=1) if lm_embeddings is not None else node_feat
+    # store raw language model embeddings for later use
+    if lm_embeddings is not None:
+        complex_graph['receptor'].lm_embeddings = lm_embeddings
+        complex_graph['receptor'].x = torch.cat([node_feat, lm_embeddings], axis=1)
+    else:
+        complex_graph['receptor'].x = node_feat
     complex_graph['receptor'].pos = coords
     complex_graph['receptor'].side_chain_vecs = side_chain_vecs.float()
     complex_graph['receptor', 'rec_contact', 'receptor'].edge_index = edge_index

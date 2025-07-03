@@ -62,10 +62,10 @@ def get_sequences(protein_files, protein_sequences):
 
 
 def compute_ESM_embeddings(model, alphabet, labels, sequences):
+    """Compute per-residue ESMFold embeddings and CLS token representations."""
     # settings used
     toks_per_batch = 4096
     repr_layers = [33]
-    include = "per_tok"
     truncation_seq_length = 10000
 
     dataset = FastaBatchedDataset(labels, sequences)
@@ -77,6 +77,7 @@ def compute_ESM_embeddings(model, alphabet, labels, sequences):
     assert all(-(model.num_layers + 1) <= i <= model.num_layers for i in repr_layers)
     repr_layers = [(i + model.num_layers + 1) % (model.num_layers + 1) for i in repr_layers]
     embeddings = {}
+    cls_tokens = {}
 
     with torch.no_grad():
         for batch_idx, (labels, strs, toks) in enumerate(data_loader):
@@ -89,8 +90,10 @@ def compute_ESM_embeddings(model, alphabet, labels, sequences):
 
             for i, label in enumerate(labels):
                 truncate_len = min(truncation_seq_length, len(strs[i]))
-                embeddings[label] = representations[33][i, 1: truncate_len + 1].clone()
-    return embeddings
+                rep = representations[33][i]
+                cls_tokens[label] = rep[0].clone()
+                embeddings[label] = rep[1: truncate_len + 1].clone()
+    return embeddings, cls_tokens
 
 
 def generate_ESM_structure(model, filename, sequence):
@@ -159,19 +162,22 @@ class InferenceDataset(Dataset):
                 # labels.extend([complex_names[i] + '_chain_' + str(j) for j in range(len(s))])
                 labels.extend([f'{complex_names[i]}chain{j}' for j in range(len(s))])
 
-            lm_embeddings = compute_ESM_embeddings(model, alphabet, labels, sequences)
+            lm_embeddings, cls_tokens = compute_ESM_embeddings(model, alphabet, labels, sequences)
 
             self.lm_embeddings = []
+            self.cls_embeddings = []
             for i in range(len(protein_sequences)):
                 s = protein_sequences[i].split(':')
-                # self.lm_embeddings.append([lm_embeddings[f'{complex_names[i]}_chain_{j}'] for j in range(len(s))])
                 self.lm_embeddings.append([lm_embeddings[f'{complex_names[i]}chain{j}'] for j in range(len(s))])
+                self.cls_embeddings.append([cls_tokens[f'{complex_names[i]}chain{j}'] for j in range(len(s))])
 
         elif not lm_embeddings:
             self.lm_embeddings = [None] * len(self.complex_names)
+            self.cls_embeddings = [None] * len(self.complex_names)
 
         else:
             self.lm_embeddings = precomputed_lm_embeddings
+            self.cls_embeddings = [None] * len(self.complex_names)
 
         # generate structures with ESMFold
         if None in protein_files:
@@ -191,8 +197,11 @@ class InferenceDataset(Dataset):
 
     def get(self, idx):
 
-        name, protein_file, ligand_description, lm_embedding = \
-            self.complex_names[idx], self.protein_files[idx], self.ligand_descriptions[idx], self.lm_embeddings[idx]
+        name = self.complex_names[idx]
+        protein_file = self.protein_files[idx]
+        ligand_description = self.ligand_descriptions[idx]
+        lm_embedding = self.lm_embeddings[idx]
+        cls_embedding = self.cls_embeddings[idx] if hasattr(self, 'cls_embeddings') else None
 
         # build the pytorch geometric heterogeneous graph
         complex_graph = HeteroData()
@@ -232,6 +241,11 @@ class InferenceDataset(Dataset):
                 all_atoms=self.all_atoms,
                 atom_cutoff=self.atom_radius,
                 atom_max_neighbors=self.atom_max_neighbors)
+
+            if cls_embedding is not None:
+                complex_graph['receptor'].cls_embedding = torch.stack(
+                    [torch.tensor(e) for e in cls_embedding]
+                )
 
         except Exception as e:
             print(f'Skipping {name} because of the error:')

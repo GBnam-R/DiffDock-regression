@@ -233,3 +233,16 @@ We sincerely thank:
 * Jacob Silterra for his help with the publishing and deployment of the code.
 * Arthur Deng, Nicholas Polizzi and Ben Fry for their critical contributions to part of the code in this repository. 
 * Wei Lu and Rachel Wu for pointing out some issues with the code.
+
+## Fine-tuning with DiffDock embeddings
+To create a dataset for training a regression model from DiffDock results, run:
+
+```bash
+python Diffdock_IC50_codes/prepare_regression_dataset.py <path_to_Diffdock_data> metadata.csv dataset.pt
+```
+
+The dataset can be used to fine-tune a Regression Transformer with:
+
+```bash
+python Diffdock_IC50_codes/finetune_regression_transformer.py dataset.pt run_dir --epochs 20 --batch_size 8
+```
