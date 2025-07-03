@@ -195,7 +195,7 @@ def new_extract_receptor_structure(seq, all_coords, complex_graph, neighbor_cuto
     feature_list = [[safe_index(allowable_features['possible_amino_acids'], res)] for res in res_names_list]
     node_feat = torch.tensor(feature_list, dtype=torch.float32)
 
-    lm_embeddings = torch.tensor(np.concatenate(lm_embeddings, axis=0)) if lm_embeddings is not None else None
+    lm_embeddings = torch.tensor(lm_embeddings) if lm_embeddings is not None else None
     # store raw language model embeddings for later use
     if lm_embeddings is not None:
         complex_graph['receptor'].lm_embeddings = lm_embeddings
