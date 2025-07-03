@@ -4,6 +4,18 @@ import numpy as np
 import torch
 
 
+def _safe_svd(matrix: torch.Tensor):
+    """Compute SVD with a CPU fallback if the GPU computation fails."""
+    try:
+        return torch.linalg.svd(matrix)
+    except RuntimeError:
+        # In rare cases the CUDA SVD fails to converge for ill-conditioned
+        # matrices. Falling back to the CPU implementation resolves this
+        # issue and the result can be moved back to the original device.
+        U, S, Vt = torch.linalg.svd(matrix.cpu())
+        return U.to(matrix.device), S.to(matrix.device), Vt.to(matrix.device)
+
+
 def quaternion_to_matrix(quaternions):
     """
     From https://pytorch3d.readthedocs.io/en/latest/_modules/pytorch3d/transforms/rotation_conversions.html
@@ -229,7 +241,7 @@ def rigid_transform_Kabsch_3D_torch(A, B):
     H = Am @ Bm.T
 
     # find rotation
-    U, S, Vt = torch.linalg.svd(H)
+    U, S, Vt = _safe_svd(H)
 
     R = Vt.T @ U.T
     # special reflection case
@@ -263,7 +275,7 @@ def rigid_transform_Kabsch_3D_torch_batch(A, B):
     H = torch.bmm(Am, Bm.transpose(1, 2))
 
     # find rotation
-    U, S, Vt = torch.linalg.svd(H)
+    U, S, Vt = _safe_svd(H)
     R = torch.bmm(Vt.transpose(1, 2), U.transpose(1, 2))
 
     # reflection case
@@ -299,7 +311,7 @@ def rigid_transform_Kabsch_independent_torch(A, B):
     H = Am @ Bm.T
 
     # find rotation
-    U, S, Vt = torch.linalg.svd(H)
+    U, S, Vt = _safe_svd(H)
 
     R = Vt.T @ U.T
     # special reflection case
