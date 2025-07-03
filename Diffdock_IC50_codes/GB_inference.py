@@ -47,9 +47,12 @@ RDLogger.DisableLog('rdApp.*')
 warnings.filterwarnings("ignore", category=UserWarning,
                         message="The TorchScript type system doesn't support instance-level annotations on empty non-base types in `__init__`")
 
-# Prody logging is very verbose by default
-prody_logger = logging.getLogger(".prody")
+# Prody logging is very verbose by default. Use the correct logger name and
+# remove existing handlers to avoid duplicated messages.
+prody_logger = logging.getLogger("prody")
+prody_logger.handlers.clear()
 prody_logger.setLevel(logging.ERROR)
+prody_logger.propagate = False
 
 REPOSITORY_URL = os.environ.get("REPOSITORY_URL", "https://github.com/gcorso/DiffDock")
 REMOTE_URLS = [f"{REPOSITORY_URL}/releases/latest/download/diffdock_models.zip",
