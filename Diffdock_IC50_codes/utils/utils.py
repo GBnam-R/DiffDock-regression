@@ -410,4 +410,7 @@ def crop_beyond(complex_graph, cutoff, all_atoms):
         complex_graph['atom', 'atom_contact', 'atom'].edge_index = subgraph(atoms_to_keep, complex_graph['atom', 'atom_contact', 'atom'].edge_index, relabel_nodes=True)[0]
         complex_graph['atom', 'atom_rec_contact', 'receptor'].edge_index = atom_res_edge_index
 
+    if complex_graph['receptor'].pos.numel() == 0 or complex_graph['receptor', 'rec_contact', 'receptor'].edge_index.numel() == 0:
+        raise ValueError("Cropping removed all receptor residues, resulting in an empty graph. Try increasing the cutoff distance.")
+
     #print("cropped", 1-torch.mean(residues_to_keep.float()), 'residues', 1-torch.mean(atoms_to_keep.float()), 'atoms')
