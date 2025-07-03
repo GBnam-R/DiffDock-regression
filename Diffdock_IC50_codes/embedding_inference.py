@@ -137,20 +137,30 @@ def main(args: Namespace) -> None:
         else:
             confidence_data_list = None
 
-        data_list, confidence, final_embedding, final_complex_graph = sampling(
-            data_list=data_list,
-            model=model,
-            inference_steps=args.inference_steps,
-            tr_schedule=tr_schedule,
-            rot_schedule=tr_schedule,
-            tor_schedule=tr_schedule,
-            device=device,
-            t_to_sigma=t_to_sigma,
-            model_args=score_model_args,
-            confidence_model=confidence_model,
-            confidence_data_list=confidence_data_list,
-            confidence_model_args=confidence_args,
-        )
+        name_field = orig_complex_graph['name']
+        complex_name = name_field if isinstance(name_field, str) else name_field[0]
+
+        try:
+            data_list, confidence, final_embedding, final_complex_graph = sampling(
+                data_list=data_list,
+                model=model,
+                inference_steps=args.inference_steps,
+                tr_schedule=tr_schedule,
+                rot_schedule=tr_schedule,
+                tor_schedule=tr_schedule,
+                device=device,
+                t_to_sigma=t_to_sigma,
+                model_args=score_model_args,
+                confidence_model=confidence_model,
+                confidence_data_list=confidence_data_list,
+                confidence_model_args=confidence_args,
+            )
+        except RuntimeError as e:
+            if 'svd' in str(e).lower():
+                print(f"SVD failed for {complex_name}: {e}. Skipping.")
+            else:
+                print(f"Runtime error for {complex_name}: {e}. Skipping.")
+            continue
 
         ligand_pos = [
             complex_graph['ligand'].pos.cpu().numpy() + orig_complex_graph.original_center.cpu().numpy()
@@ -167,8 +177,6 @@ def main(args: Namespace) -> None:
         else:
             confidence = [float('nan')] * len(ligand_pos)
 
-        name_field = orig_complex_graph['name']
-        complex_name = name_field if isinstance(name_field, str) else name_field[0]
         write_dir = os.path.join(args.out_dir, complex_name)
         os.makedirs(write_dir, exist_ok=True)
         mol_pred = copy.deepcopy(orig_complex_graph.mol[0])
