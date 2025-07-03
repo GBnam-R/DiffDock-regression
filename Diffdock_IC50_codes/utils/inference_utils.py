@@ -52,12 +52,22 @@ def set_nones(l):
 
 
 def get_sequences(protein_files, protein_sequences):
+    """Return the sequence for each complex.
+
+    If a sequence is explicitly provided, use it. Otherwise extract the
+    sequence from the PDB file. This prioritises user provided sequences
+    over sequences parsed from PDB files.
+    """
+
     new_sequences = []
-    for i in range(len(protein_files)):
-        if protein_files[i] is not None:
-            new_sequences.append(get_sequences_from_pdbfile(protein_files[i]))
+    for pdb_file, seq in zip(protein_files, protein_sequences):
+        if seq is not None:
+            new_sequences.append(seq)
+        elif pdb_file is not None:
+            new_sequences.append(get_sequences_from_pdbfile(pdb_file))
         else:
-            new_sequences.append(protein_sequences[i])
+            new_sequences.append(None)
+
     return new_sequences
 
 
