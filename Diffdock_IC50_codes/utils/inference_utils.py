@@ -275,7 +275,10 @@ class InferenceDataset(Dataset):
                 atom_max_neighbors=self.atom_max_neighbors)
 
             if save_embedding is not None:
-                complex_graph['receptor'].input_lm_embeddings = torch.tensor(np.concatenate(save_embedding, axis=0))
+                if isinstance(save_embedding[0], torch.Tensor):
+                    complex_graph['receptor'].input_lm_embeddings = torch.cat(save_embedding, dim=0)
+                else:
+                    complex_graph['receptor'].input_lm_embeddings = torch.tensor(np.concatenate(save_embedding, axis=0))
 
             if cls_embedding is not None:
                 complex_graph['receptor'].cls_embedding = torch.stack(
