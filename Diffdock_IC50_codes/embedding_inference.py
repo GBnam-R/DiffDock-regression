@@ -1,15 +1,21 @@
+
+신규
++149
+-0
+
 import os
 import copy
 import yaml
 import numpy as np
 import torch
+import pandas as pd
 from argparse import ArgumentParser, Namespace, FileType
 from functools import partial
 from torch_geometric.loader import DataLoader
 
 from datasets.process_mols import write_mol_with_coords
 from utils.diffusion_utils import t_to_sigma as t_to_sigma_compl, get_t_schedule
-from utils.inference_utils import InferenceDataset
+from utils.inference_utils import InferenceDataset, set_nones
 from utils.sampling import randomize_position, sampling
 from utils.utils import get_model
 from rdkit.Chem import RemoveAllHs
@@ -18,8 +24,10 @@ from rdkit.Chem import RemoveAllHs
 def get_parser():
     parser = ArgumentParser()
     parser.add_argument('--config', type=FileType('r'), default='default_inference_args.yaml')
-    parser.add_argument('--protein_path', type=str, required=True)
-    parser.add_argument('--ligand_description', type=str, required=True)
+    parser.add_argument('--protein_ligand_csv', type=str, default=None,
+                        help='CSV with columns complex_name, ligand_description, protein_path, protein_sequence')
+    parser.add_argument('--protein_path', type=str, default=None)
+    parser.add_argument('--ligand_description', type=str, default=None)
     parser.add_argument('--protein_sequence', type=str, default=None)
     parser.add_argument('--complex_name', type=str, default='complex')
     parser.add_argument('--out_dir', type=str, default='results')
@@ -46,12 +54,26 @@ def main(args: Namespace) -> None:
     model = model.to(device)
     model.eval()
 
+    if args.protein_ligand_csv is not None:
+        df = pd.read_csv(args.protein_ligand_csv)
+        complex_names = set_nones(df["complex_name"].tolist())
+        protein_files = set_nones(df["protein_path"].tolist())
+        ligand_descs = set_nones(df["ligand_description"].tolist())
+        protein_seqs = set_nones(df.get("protein_sequence", []).tolist()) if "protein_sequence" in df.columns else [None] * len(df)
+    else:
+        complex_names = [args.complex_name]
+        protein_files = [args.protein_path]
+        ligand_descs = [args.ligand_description]
+        protein_seqs = [args.protein_sequence]
+
+    complex_names = [n if n is not None else f"complex_{i}" for i, n in enumerate(complex_names)]
+
     dataset = InferenceDataset(
         out_dir=args.out_dir,
-        complex_names=[args.complex_name],
-        protein_files=[args.protein_path],
-        ligand_descriptions=[args.ligand_description],
-        protein_sequences=[args.protein_sequence],
+        complex_names=complex_names,
+        protein_files=protein_files,
+        ligand_descriptions=ligand_descs,
+        protein_sequences=protein_seqs,
         lm_embeddings=True,
         receptor_radius=score_model_args.receptor_radius,
         remove_hs=score_model_args.remove_hs,
@@ -66,7 +88,7 @@ def main(args: Namespace) -> None:
 
     tr_schedule = get_t_schedule(sigma_schedule='expbeta', inference_steps=args.inference_steps)
 
-    for orig_complex_graph in loader:
+    for i, orig_complex_graph in enumerate(loader):
         if not orig_complex_graph.success[0]:
             continue
         data_list = [copy.deepcopy(orig_complex_graph) for _ in range(args.samples_per_complex)]
@@ -99,7 +121,9 @@ def main(args: Namespace) -> None:
         else:
             confidence = [float('nan')] * len(ligand_pos)
 
-        write_dir = os.path.join(args.out_dir, args.complex_name)
+        name_field = orig_complex_graph['name']
+        complex_name = name_field if isinstance(name_field, str) else name_field[0]
+        write_dir = os.path.join(args.out_dir, complex_name)
         os.makedirs(write_dir, exist_ok=True)
         mol_pred = copy.deepcopy(orig_complex_graph.mol[0])
         if score_model_args.remove_hs:
