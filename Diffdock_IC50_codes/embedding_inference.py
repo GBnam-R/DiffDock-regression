@@ -1,8 +1,3 @@
-
-신규
-+149
--0
-
 import os
 import copy
 import yaml
