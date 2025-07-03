@@ -26,6 +26,9 @@ def get_parser():
     parser.add_argument('--protein_sequence', type=str, default=None)
     parser.add_argument('--complex_name', type=str, default='complex')
     parser.add_argument('--out_dir', type=str, default='results')
+    parser.add_argument('--confidence_model_dir', type=str, default=None)
+    parser.add_argument('--confidence_ckpt', type=str, default='best_model_epoch75.pt')
+    parser.add_argument('--old_confidence_model', action='store_true', default=True)
     return parser
 
 
@@ -79,7 +82,44 @@ def main(args: Namespace) -> None:
         knn_only_graph=not getattr(score_model_args, 'not_knn_only_graph', False),
     )
 
+    if args.confidence_model_dir is not None:
+        with open(f'{args.confidence_model_dir}/model_parameters.yml') as f:
+            confidence_args = Namespace(**yaml.full_load(f))
+        confidence_dataset = InferenceDataset(
+            out_dir=args.out_dir,
+            complex_names=complex_names,
+            protein_files=protein_files,
+            ligand_descriptions=ligand_descs,
+            protein_sequences=protein_seqs,
+            lm_embeddings=True,
+            receptor_radius=confidence_args.receptor_radius,
+            remove_hs=confidence_args.remove_hs,
+            c_alpha_max_neighbors=confidence_args.c_alpha_max_neighbors,
+            all_atoms=confidence_args.all_atoms,
+            atom_radius=confidence_args.atom_radius,
+            atom_max_neighbors=confidence_args.atom_max_neighbors,
+            precomputed_lm_embeddings=dataset.model_embeddings,
+            knn_only_graph=not getattr(confidence_args, 'not_knn_only_graph', False),
+        )
+        confidence_model = get_model(
+            confidence_args,
+            device,
+            t_to_sigma=t_to_sigma,
+            no_parallel=True,
+            confidence_mode=True,
+            old=args.old_confidence_model,
+        )
+        state_dict = torch.load(f'{args.confidence_model_dir}/{args.confidence_ckpt}', map_location='cpu')
+        confidence_model.load_state_dict(state_dict, strict=True)
+        confidence_model = confidence_model.to(device)
+        confidence_model.eval()
+    else:
+        confidence_dataset = None
+        confidence_model = None
+        confidence_args = None
+
     loader = DataLoader(dataset, batch_size=1, shuffle=False)
+    confidence_loader = iter(DataLoader(confidence_dataset, batch_size=1, shuffle=False)) if confidence_dataset is not None else None
 
     tr_schedule = get_t_schedule(sigma_schedule='expbeta', inference_steps=args.inference_steps)
 
@@ -88,6 +128,14 @@ def main(args: Namespace) -> None:
             continue
         data_list = [copy.deepcopy(orig_complex_graph) for _ in range(args.samples_per_complex)]
         randomize_position(data_list, score_model_args.no_torsion, False, score_model_args.tr_sigma_max)
+
+        if confidence_loader is not None:
+            confidence_complex_graph = next(confidence_loader)
+            if not confidence_complex_graph.success:
+                continue
+            confidence_data_list = [copy.deepcopy(confidence_complex_graph) for _ in range(args.samples_per_complex)]
+        else:
+            confidence_data_list = None
 
         data_list, confidence, final_embedding, final_complex_graph = sampling(
             data_list=data_list,
@@ -99,6 +147,9 @@ def main(args: Namespace) -> None:
             device=device,
             t_to_sigma=t_to_sigma,
             model_args=score_model_args,
+            confidence_model=confidence_model,
+            confidence_data_list=confidence_data_list,
+            confidence_model_args=confidence_args,
         )
 
         ligand_pos = [
@@ -127,15 +178,19 @@ def main(args: Namespace) -> None:
             write_mol_with_coords(
                 mol_pred,
                 pos,
-                os.path.join(write_dir, f'rank{rank+1}_confidence{confidence[rank]:.2f}.sdf'),
+                os.path.join(write_dir, f'rank{rank+1}_confidence_{confidence[rank]:.2f}.sdf'),
             )
 
         np.save(os.path.join(write_dir, 'complex_embedding.npy'), final_embedding.cpu().numpy())
-        if hasattr(orig_complex_graph['receptor'], 'lm_embeddings'):
-            np.save(
-                os.path.join(write_dir, 'receptor_embedding.npy'),
-                orig_complex_graph['receptor'].lm_embeddings.cpu().numpy(),
-            )
+        if hasattr(orig_complex_graph['receptor'], 'input_lm_embeddings'):
+            rec_emb = orig_complex_graph['receptor'].input_lm_embeddings
+        elif hasattr(orig_complex_graph['receptor'], 'lm_embeddings'):
+            rec_emb = orig_complex_graph['receptor'].lm_embeddings
+        else:
+            rec_emb = None
+
+        if rec_emb is not None:
+            np.save(os.path.join(write_dir, 'receptor_embedding.npy'), rec_emb.cpu().numpy())
             if hasattr(orig_complex_graph['receptor'], 'cls_embedding'):
                 cls_emb = orig_complex_graph['receptor'].cls_embedding
                 if cls_emb.dim() > 1:
