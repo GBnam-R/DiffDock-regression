@@ -26,7 +26,7 @@ def get_parser():
     parser.add_argument('--protein_sequence', type=str, default=None)
     parser.add_argument('--complex_name', type=str, default='complex')
     parser.add_argument('--out_dir', type=str, default='results')
-    parser.add_argument('--confidence_model_dir', type=str, default=None)
+    parser.add_argument('--confidence_model_dir', type=str, default='./workdir/v1.1/confidence_model')
     parser.add_argument('--confidence_ckpt', type=str, default='best_model_epoch75.pt')
     parser.add_argument('--old_confidence_model', action='store_true', default=True)
     return parser
