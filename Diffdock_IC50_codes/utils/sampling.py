@@ -212,9 +212,21 @@ def sampling(data_list, model, inference_steps, tr_schedule, rot_schedule, tor_s
 
                     confidence_complex_graph_batch = confidence_complex_graph_batch.to(device)
                     set_time(confidence_complex_graph_batch, 0, 0, 0, 0, b, confidence_model_args.all_atoms, device)
-                    out = confidence_model(confidence_complex_graph_batch)
+                    try:
+                        out = confidence_model(confidence_complex_graph_batch)
+                    except RuntimeError as e:
+                        if "AssertionError" in str(e):
+                            print("Skipping complex due to confidence model error:", e)
+                            continue
+                        raise
                 else:
-                    out = confidence_model(complex_graph_batch)
+                    try:
+                        out = confidence_model(complex_graph_batch)
+                    except RuntimeError as e:
+                        if "AssertionError" in str(e):
+                            print("Skipping complex due to confidence model error:", e)
+                            continue
+                        raise
 
                 if type(out) is tuple:
                     out = out[0]
