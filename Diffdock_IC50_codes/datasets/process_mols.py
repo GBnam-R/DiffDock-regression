@@ -166,7 +166,7 @@ def new_extract_receptor_structure(seq, all_coords, complex_graph, neighbor_cuto
 
     # Build the k-NN graph
     coords = torch.tensor(all_coords[:, 1, :], dtype=torch.float)
-    if len(coords) > 3000:
+    if len(coords) > 4096:
         raise ValueError(f'The receptor is too large {len(coords)}')
     if knn_only_graph:
         edge_index = knn_graph(coords, k=max_neighbors if max_neighbors else 32)
