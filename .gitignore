@@ -13,6 +13,11 @@ __pycache__/
 data/
 # models/
 
+# Diffdock_IC50_codes
+Diffdock_IC50_codes/.p.npy
+Diffdock_IC50_codes/.score.npy
+Diffdock_IC50_codes/workdir/
+
 # Distribution / packaging
 .Python
 build/
@@ -147,8 +152,3 @@ runs
 examples/models
 bash
 sandbox
-
-# Diffdock_IC50_codes
-Diffdock_IC50_codes/.p.npy
-Diffdock_IC50_codes/.score.npy
-Diffdock_IC50_codes/workdir/

@@ -26,9 +26,41 @@ def get_parser():
     parser.add_argument('--protein_sequence', type=str, default=None)
     parser.add_argument('--complex_name', type=str, default='complex')
     parser.add_argument('--out_dir', type=str, default='results')
-    parser.add_argument('--confidence_model_dir', type=str, default='./workdir/v1.1/confidence_model')
-    parser.add_argument('--confidence_ckpt', type=str, default='best_model_epoch75.pt')
-    parser.add_argument('--old_confidence_model', action='store_true', default=True)
+
+    parser.add_argument('--save_visualisation', action='store_true', default=False, help='Save a pdb file with all of the steps of the reverse diffusion')
+    parser.add_argument('--samples_per_complex', type=int, default=1, help='Number of samples to generate')
+
+    # parser.add_argument('--model_dir', type=str, default=None, help='Path to folder with trained score model and hyperparameters')
+    # parser.add_argument('--ckpt', type=str, default='best_ema_inference_epoch_model.pt', help='Checkpoint to use for the score model')
+    parser.add_argument('--confidence_model_dir', type=str, default=None, help='Path to folder with trained confidence model and hyperparameters')
+    # parser.add_argument('--confidence_ckpt', type=str, default='best_model.pt', help='Checkpoint to use for the confidence model')
+
+    parser.add_argument('--batch_size', type=int, default=16, help='')
+    parser.add_argument('--no_final_step_noise', action='store_true', default=True, help='Use no noise in the final step of the reverse diffusion')
+    parser.add_argument('--inference_steps', type=int, default=20, help='Number of denoising steps')
+    parser.add_argument('--actual_steps', type=int, default=None, help='Number of denoising steps that are actually performed')
+
+    parser.add_argument('--old_score_model', action='store_true', default=False, help='')
+    parser.add_argument('--old_confidence_model', action='store_true', default=True, help='')
+    parser.add_argument('--initial_noise_std_proportion', type=float, default=-1.0, help='Initial noise std proportion')
+    parser.add_argument('--choose_residue', action='store_true', default=False, help='')
+
+    parser.add_argument('--temp_sampling_tr', type=float, default=1.0)
+    parser.add_argument('--temp_psi_tr', type=float, default=0.0)
+    parser.add_argument('--temp_sigma_data_tr', type=float, default=0.5)
+    parser.add_argument('--temp_sampling_rot', type=float, default=1.0)
+    parser.add_argument('--temp_psi_rot', type=float, default=0.0)
+    parser.add_argument('--temp_sigma_data_rot', type=float, default=0.5)
+    parser.add_argument('--temp_sampling_tor', type=float, default=1.0)
+    parser.add_argument('--temp_psi_tor', type=float, default=0.0)
+    parser.add_argument('--temp_sigma_data_tor', type=float, default=0.5)
+
+    parser.add_argument('--gnina_minimize', action='store_true', default=False, help='')
+    parser.add_argument('--gnina_path', type=str, default='gnina', help='')
+    parser.add_argument('--gnina_log_file', type=str, default='gnina_log.txt', help='')  # To redirect gnina subprocesses stdouts from the terminal window
+    parser.add_argument('--gnina_full_dock', action='store_true', default=False, help='')
+    parser.add_argument('--gnina_autobox_add', type=float, default=4.0)
+    parser.add_argument('--gnina_poses_to_optimize', type=int, default=1)
     return parser
 
 
