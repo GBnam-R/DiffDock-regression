@@ -1,37 +1,52 @@
 # Significant contribution from Ben Fry and Nick Polizzi
 
-three_to_one = {'ALA':	'A',
-                'ARG':	'R',
-                'ASN':	'N',
-                'ASP':	'D',
-                'CYS':	'C',
-                'GLN':	'Q',
-                'GLU':	'E',
-                'GLY':	'G',
-                'HIS':	'H',
-                'ILE':	'I',
-                'LEU':	'L',
-                'LYS':	'K',
-                'MET':	'M',
-                'MSE':  'M', # MSE this is almost the same AA as MET. The sulfur is just replaced by Selen
-                'PHE':	'F',
-                'PRO':	'P',
-                'PYL':	'O',
-                'SER':	'S',
-                'SEC':	'U',
-                'THR':	'T',
-                'TRP':	'W',
-                'TYR':	'Y',
-                'VAL':	'V',
-                'ASX':	'B',
-                'GLX':	'Z',
-                'XAA':	'X',
-                'XLE':	'J'}
+three_to_one = {'ALA': 'A',
+ 'ARG': 'R',
+ 'ASH': 'D',
+ 'ASN': 'N',
+ 'ASP': 'D',
+ 'ASX': 'B',
+ 'CYM': 'C',
+ 'CYS': 'C',
+ 'CYX': 'C',
+ 'GLH': 'E',
+ 'GLN': 'Q',
+ 'GLU': 'E',
+ 'GLX': 'Z',
+ 'GLY': 'G',
+ 'HID': 'H',
+ 'HIE': 'H',
+ 'HIP': 'H',
+ 'HIS': 'H',
+ 'ILE': 'I',
+ 'LEU': 'L',
+ 'LYN': 'K',
+ 'LYS': 'K',
+ 'MET': 'M',
+ 'MSE': 'M',
+ 'PHE': 'F',
+ 'PRO': 'P',
+ 'PYL': 'O',
+ 'SEC': 'U',
+ 'SER': 'S',
+ 'THR': 'T',
+ 'TRP': 'W',
+ 'TYR': 'Y',
+ 'VAL': 'V',
+ 'XAA': 'X',
+ 'XLE': 'J'}
 
 
-aa_name2aa_idx = {'ALA': 0, 'ARG': 1, 'ASN': 2, 'ASP': 3, 'CYS': 4, 'GLU': 5, 'GLN': 6, 'GLY': 7,
-                  'HIS': 8, 'ILE': 9, 'LEU': 10, 'LYS': 11, 'MET': 12, 'PHE': 13, 'PRO': 14,
-                  'SER': 15, 'THR': 16, 'TRP': 17, 'TYR': 18, 'VAL': 19, 'MSE': 12}
+aa_name2aa_idx = {
+    'ALA': 0, 'ARG': 1, 'ASN': 2, 'ASP': 3, 'CYS': 4, 'GLU': 5, 'GLN': 6, 'GLY': 7,
+    'HIS': 8, 'HID': 8, 'HIE': 8, 'HIP': 8,
+    'ILE': 9, 'LEU': 10, 'LYS': 11, 'LYN': 11,
+    'MET': 12, 'MSE': 12,
+    'PHE': 13, 'PRO': 14,
+    'SER': 15, 'THR': 16, 'TRP': 17, 'TYR': 18, 'VAL': 19,
+    'CYM': 4, 'CYX': 4,
+    'GLH': 5, 'ASH': 3
+}
 
 
 aa_short2long = {'C': 'CYS', 'D': 'ASP', 'S': 'SER', 'Q': 'GLN', 'K': 'LYS', 'I': 'ILE',
@@ -44,6 +59,14 @@ aa_short2aa_idx = {aa_short: aa_name2aa_idx[aa_long] for aa_short, aa_long in aa
 aa_idx2aa_short = {aa_idx: aa_short for aa_short, aa_idx in aa_short2aa_idx.items()}
 aa_long2short = {aa_long: aa_short for aa_short, aa_long in aa_short2long.items()}
 aa_long2short['MSE'] = 'M'
+aa_long2short['HID'] = 'H'
+aa_long2short['HIE'] = 'H'
+aa_long2short['HIP'] = 'H'
+aa_long2short['CYM'] = 'C'
+aa_long2short['CYX'] = 'C'
+aa_long2short['LYN'] = 'K'
+aa_long2short['GLH'] = 'E'
+aa_long2short['ASH'] = 'D'
 
 chi = { 'C' :
         { 1: ('N'  , 'CA' , 'CB' , 'SG' )   },
