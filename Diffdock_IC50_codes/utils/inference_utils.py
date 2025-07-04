@@ -4,7 +4,7 @@ import pickle
 import numpy as np
 
 import torch
-import prody as pr
+from Bio.PDB import PDBParser
 from esm import FastaBatchedDataset, pretrained
 from rdkit.Chem import AddHs, MolFromSmiles
 from torch_geometric.data import Dataset, HeteroData
@@ -22,27 +22,29 @@ from datasets.process_mols import (
 def get_sequences_from_pdbfile(file_path):
     """Return the sequence for each chain in ``file_path``.
 
-    The extraction mimics ``moad_extract_receptor_structure`` by relying on
-    ProDy for parsing while falling back to ``three_to_one`` for residue names
-    that are not standard. Unknown amino acids are replaced by ``"-"`` so the
-    sequence length matches the parsed coordinates.
+    The implementation mirrors the previous Bio.PDB based logic which only
+    keeps residues that contain backbone ``CA``, ``N`` and ``C`` atoms. Unknown
+    amino acids are replaced with ``"-"`` so the returned sequence aligns with
+    the parsed coordinates.
     """
 
-    pdb = pr.parsePDB(file_path)
-    hv = pdb.getHierView()
-    sequences = []
-
-    for chain in hv:
-        chain_seq = []
+    biopython_parser = PDBParser()
+    structure = biopython_parser.get_structure("random_id", file_path)[0]
+    sequence = None
+    for chain in structure:
+        seq = ""
         for residue in chain:
-            atoms = {a.getName() for a in residue}
-            if not {"CA", "N", "C"}.issubset(atoms):
+            if residue.get_resname() == "HOH":
                 continue
-            resname = residue.getResname()
-            chain_seq.append(three_to_one.get(resname, "-"))
-        sequences.append("".join(chain_seq))
+            atoms = {atom.name for atom in residue}
+            if {"CA", "N", "C"}.issubset(atoms):
+                seq += three_to_one.get(residue.get_resname(), "-")
+        if sequence is None:
+            sequence = seq
+        else:
+            sequence += ":" + seq
 
-    return ":".join(sequences)
+    return sequence
 
 
 def set_nones(l):
