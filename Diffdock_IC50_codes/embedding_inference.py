@@ -155,7 +155,7 @@ def main(args: Namespace) -> None:
                 confidence_data_list=confidence_data_list,
                 confidence_model_args=confidence_args,
             )
-        except RuntimeError as e:
+        except Exception as e:
             if 'svd' in str(e).lower():
                 print(f"SVD failed for {complex_name}: {e}. Skipping.")
             else:

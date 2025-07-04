@@ -214,19 +214,15 @@ def sampling(data_list, model, inference_steps, tr_schedule, rot_schedule, tor_s
                     set_time(confidence_complex_graph_batch, 0, 0, 0, 0, b, confidence_model_args.all_atoms, device)
                     try:
                         out = confidence_model(confidence_complex_graph_batch)
-                    except AssertionError as e:
-                        print("Confidence model failed:", e, "-> using -2.0 score")
-                        out = torch.full((b,), -2.0, device=device)
-                    except Exception:
-                        raise
+                    except Exception as e:
+                        print("Skipping complex due to confidence model error:", e)
+                        continue
                 else:
                     try:
                         out = confidence_model(complex_graph_batch)
-                    except AssertionError as e:
-                        print("Confidence model failed:", e, "-> using -2.0 score")
-                        out = torch.full((b,), -2.0, device=device)
-                    except Exception:
-                        raise
+                    except Exception as e:
+                        print("Skipping complex due to confidence model error:", e)
+                        continue
 
                 if type(out) is tuple:
                     out = out[0]
