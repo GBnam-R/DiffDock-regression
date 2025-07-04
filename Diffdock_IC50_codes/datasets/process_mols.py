@@ -10,6 +10,10 @@ from rdkit.Geometry import Point3D
 from torch import cdist
 from torch_cluster import knn_graph
 import prody as pr
+from prody import LOGGER as PRODY_LOGGER
+
+# Avoid duplicated ProDy messages when parsing PDB files
+PRODY_LOGGER.propagate = False
 
 import torch.nn.functional as F
 
