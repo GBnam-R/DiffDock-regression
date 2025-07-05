@@ -177,7 +177,7 @@ def main(args: argparse.Namespace) -> None:
         else os.path.join(diffdock_dir, args.dataset_file)
     )
 
-    tokenizer = ExpressionBertTokenizer.from_pretrained("qed_model")
+    tokenizer = ExpressionBertTokenizer.from_pretrained("model/Diffdock_RT")
     added = tokenizer.add_tokens(
         ["[comp_token]", "[protein_token]", "<complex>", "<protein>", "<pic50>"]
     )
