@@ -11,7 +11,7 @@ __pycache__/
 
 # Model files
 data/
-# models/
+models/Diffdock_RT/pytorch_model.bin
 
 # Diffdock_IC50_codes
 Diffdock_IC50_codes/.p.npy
