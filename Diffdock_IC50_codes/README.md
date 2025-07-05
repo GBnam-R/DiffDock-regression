@@ -246,3 +246,16 @@ The dataset can be used to fine-tune a Regression Transformer with:
 ```bash
 python Diffdock_IC50_codes/finetune_regression_transformer.py dataset.pt run_dir --epochs 20 --batch_size 8
 ```
+
+## Creating RT inputs with complex and protein embeddings
+To generate a dataset including docking and ESMFold embeddings run:
+
+```bash
+python create_regression_transformer_input.py Diffdock_output Diffdock_output/Regression_transformer_input.csv dataset.pt
+```
+
+Each record stores embeddings for:
+* `<pic50>` – numerical pIC50 value tokenized digit by digit
+* `<complex>` – 175 `[comp_token]` placeholders whose embeddings are loaded from `complex_embedding.npy`
+* `<protein>` – 175 `[protein_token]` placeholders filled with `receptor_cls_embedding.npy` and `receptor_embedding.npy`
+

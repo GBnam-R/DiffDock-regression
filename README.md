@@ -112,6 +112,16 @@ If you need to create a new vocabulary for a dataset you can use [scripts/create
 python scripts/create_vocabulary.py examples/qed_property_example.txt examples/vocab.txt
 ```
 
+#### Create dataset from DiffDock results
+DiffDock docking outputs can be converted into RT inputs with:
+```console
+python create_regression_transformer_input.py Diffdock_output Diffdock_output/Regression_transformer_input.csv dataset.pt
+```
+The resulting ``dataset.pt`` contains tokenized sequences plus arrays with complex
+and protein embeddings. Placeholder tokens ``[comp_token]`` and
+``[protein_token]`` are automatically added to the vocabulary and replaced with
+these embeddings during training.
+
 At this point the folder containing the vocabulary file can be used to load a tokenizer compatible with any `ExpressionBertTokenizer`:
 ```python
 >>> from terminator.tokenization import ExpressionBertTokenizer

@@ -12,72 +12,73 @@ from terminator.tokenization import ExpressionBertTokenizer
 
 
 class DockingDataset(Dataset):
-    """Dataset wrapping DiffDock embeddings and pIC50 values."""
+    """Dataset providing token ids and embeddings."""
 
-    def __init__(self, records: List[Dict[str, Any]], tokenizer: ExpressionBertTokenizer):
+    def __init__(self, records: List[Dict[str, Any]]):
         self.records = records
-        self.tokenizer = tokenizer
 
     def __len__(self) -> int:
         return len(self.records)
 
     def __getitem__(self, idx: int):
         rec = self.records[idx]
-        tokenized = self.tokenizer(rec["compound"])
-        emb_list = []
-        if rec.get("protein_emb") is not None:
-            emb_list.append(torch.tensor(rec["protein_emb"], dtype=torch.float))
-        if rec.get("complex_emb") is not None:
-            emb_list.append(torch.tensor(rec["complex_emb"], dtype=torch.float))
-        features = torch.cat([e.flatten() for e in emb_list]) if emb_list else torch.empty(0)
-        label = torch.tensor(float(rec["pIC50"]), dtype=torch.float)
-        return tokenized, features, label
+        ids = torch.tensor(rec["input_ids"], dtype=torch.long)
+        cemb = torch.tensor(rec["complex_emb"], dtype=torch.float32)
+        pemb = torch.tensor(rec["protein_emb"], dtype=torch.float32)
+        label = torch.tensor(float(rec["pIC50"]), dtype=torch.float32)
+        return ids, cemb, pemb, label
 
 
 class Collator:
-    def __init__(self, tokenizer: ExpressionBertTokenizer, feat_dim: int):
+    def __init__(self, tokenizer: ExpressionBertTokenizer):
         self.tokenizer = tokenizer
-        self.feat_dim = feat_dim
 
     def __call__(self, batch):
-        tokens = [b[0] for b in batch]
-        feats = [b[1] for b in batch]
-        labels = torch.stack([b[2] for b in batch])
+        ids = [b[0] for b in batch]
+        cemb = torch.stack([b[1] for b in batch])
+        pemb = torch.stack([b[2] for b in batch])
+        labels = torch.stack([b[3] for b in batch])
 
-        enc = self.tokenizer.pad(tokens, return_tensors="pt")
-        feat_batch = torch.zeros(len(feats), self.feat_dim)
-        for i, f in enumerate(feats):
-            feat_batch[i, : f.numel()] = f
-        return enc, feat_batch, labels
+        enc = self.tokenizer.pad({"input_ids": ids}, return_tensors="pt")
+        return enc, cemb, pemb, labels
 
 
-class RegressionTransformerWithEmbeddings(nn.Module):
-    def __init__(self, base_model: str, feature_dim: int, hidden_dim: int = 256):
+class RegressionTransformer(nn.Module):
+    def __init__(self, base_model: str, tokenizer: ExpressionBertTokenizer, hidden_dim: int = 256):
         super().__init__()
         self.transformer = XLNetModel.from_pretrained(base_model)
+        self.transformer.resize_token_embeddings(len(tokenizer))
+        self.comp_id = tokenizer.vocab["[comp_token]"]
+        self.prot_id = tokenizer.vocab["[protein_token]"]
         hdim = self.transformer.config.hidden_size
-        self.proj = nn.Linear(feature_dim, hdim)
-        self.out = nn.Sequential(nn.Dropout(0.1), nn.Linear(hdim * 2, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, 1))
+        self.out = nn.Sequential(nn.Dropout(0.1), nn.Linear(hdim, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, 1))
 
-    def forward(self, input_ids, attention_mask, features):
-        out = self.transformer(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
+    def forward(self, input_ids, attention_mask, complex_emb, protein_emb):
+        embeds = self.transformer.word_embedding(input_ids)
+        for i in range(input_ids.size(0)):
+            c_idx = (input_ids[i] == self.comp_id).nonzero(as_tuple=True)[0]
+            p_idx = (input_ids[i] == self.prot_id).nonzero(as_tuple=True)[0]
+            if c_idx.numel():
+                n = min(c_idx.numel(), complex_emb.size(1))
+                embeds[i, c_idx[:n]] = complex_emb[i, :n].to(embeds.device)
+            if p_idx.numel():
+                n = min(p_idx.numel(), protein_emb.size(1))
+                embeds[i, p_idx[:n]] = protein_emb[i, :n].to(embeds.device)
+        out = self.transformer(inputs_embeds=embeds, attention_mask=attention_mask).last_hidden_state
         pooled = out.mean(dim=1)
-        proj = self.proj(features)
-        x = torch.cat([pooled, proj], dim=1)
-        return self.out(x).squeeze(-1)
+        return self.out(pooled).squeeze(-1)
 
 
-def load_dataset(path: str, tokenizer: ExpressionBertTokenizer) -> DockingDataset:
+def load_dataset(path: str) -> DockingDataset:
     records = torch.load(path)
-    return DockingDataset(records, tokenizer)
+    return DockingDataset(records)
 
 
 def train(args: argparse.Namespace) -> None:
     tokenizer = ExpressionBertTokenizer.from_pretrained(args.tokenizer)
-    dataset = load_dataset(args.dataset, tokenizer)
-    feat_dim = dataset[0][1].numel()
+    dataset = load_dataset(args.dataset)
 
-    collator = Collator(tokenizer, feat_dim)
+    collator = Collator(tokenizer)
     val_size = max(1, int(0.2 * len(dataset)))
     train_size = len(dataset) - val_size
     train_ds, val_ds = random_split(dataset, [train_size, val_size])
@@ -86,7 +87,7 @@ def train(args: argparse.Namespace) -> None:
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, collate_fn=collator)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = RegressionTransformerWithEmbeddings(args.model, feat_dim, args.hidden_dim).to(device)
+    model = RegressionTransformer(args.model, tokenizer, args.hidden_dim).to(device)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
     loss_fn = nn.MSELoss()
@@ -96,11 +97,12 @@ def train(args: argparse.Namespace) -> None:
 
     for epoch in range(args.epochs):
         model.train()
-        for enc, feats, labels in train_loader:
+        for enc, cemb, pemb, labels in train_loader:
             enc = {k: v.to(device) for k, v in enc.items()}
-            feats = feats.to(device)
+            cemb = cemb.to(device)
+            pemb = pemb.to(device)
             labels = labels.to(device)
-            pred = model(**enc, features=feats)
+            pred = model(**enc, complex_emb=cemb, protein_emb=pemb)
             loss = loss_fn(pred, labels)
             optimizer.zero_grad()
             loss.backward()
@@ -109,10 +111,11 @@ def train(args: argparse.Namespace) -> None:
         model.eval()
         preds, labs = [], []
         with torch.no_grad():
-            for enc, feats, labels in val_loader:
+            for enc, cemb, pemb, labels in val_loader:
                 enc = {k: v.to(device) for k, v in enc.items()}
-                feats = feats.to(device)
-                pred = model(**enc, features=feats)
+                cemb = cemb.to(device)
+                pemb = pemb.to(device)
+                pred = model(**enc, complex_emb=cemb, protein_emb=pemb)
                 preds.extend(pred.cpu().tolist())
                 labs.extend(labels.tolist())
         rmse = math.sqrt(sum((p - l) ** 2 for p, l in zip(preds, labs)) / len(labs))
@@ -124,7 +127,7 @@ def train(args: argparse.Namespace) -> None:
 
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Fine-tune Regression Transformer on DiffDock dataset")
-    parser.add_argument("dataset", help="Path to dataset file created with prepare_regression_dataset.py")
+    parser.add_argument("dataset", help="Path to dataset file created with create_regression_transformer_input.py")
     parser.add_argument("output", help="Directory to store checkpoints")
     parser.add_argument("--model", default="xlnet-base-cased", help="Base transformer model")
     parser.add_argument("--tokenizer", default="vocabs/smallmolecules.txt", help="Tokenizer path")

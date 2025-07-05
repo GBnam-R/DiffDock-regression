@@ -505,3 +505,8 @@ _9_5_
 [Branch3_1]
 [Branch3_2]
 [Expl=Ring3]
+[comp_token]
+[protein_token]
+<complex>
+<protein>
+<pic50>
