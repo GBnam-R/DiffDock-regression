@@ -21,9 +21,9 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 from transformers import (
     CONFIG_MAPPING,
-    MODEL_WITH_LM_HEAD_MAPPING,
+    MODEL_FOR_CAUSAL_LM_MAPPING,
     AutoConfig,
-    AutoModelWithLMHead,
+    AutoModelForCausalLM,
     DataCollatorForLanguageModeling,
     DataCollatorForPermutationLanguageModeling,
     HfArgumentParser,
@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 # logger.setLevel(level=logging.DEBUG)
 
 
-MODEL_CONFIG_CLASSES = list(MODEL_WITH_LM_HEAD_MAPPING.keys())
+MODEL_CONFIG_CLASSES = list(MODEL_FOR_CAUSAL_LM_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
 

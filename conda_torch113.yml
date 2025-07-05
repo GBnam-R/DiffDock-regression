@@ -1,0 +1,16 @@
+name: terminator-cu117
+channels:
+  - defaults
+  - https://conda.anaconda.org/rdkit
+  - conda-forge
+dependencies:
+  - python=3.10
+  - rdkit=2019.03.1
+  - pip>=19.1
+  - pip:
+      - --extra-index-url https://download.pytorch.org/whl/cu117
+      - torch==1.13.1+cu117
+      - transformers==4.29.2
+      - -r file:requirements.txt
+      - -r file:dev_requirements.txt
+      - -e .

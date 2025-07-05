@@ -11,7 +11,7 @@ from time import time
 import pandas as pd
 from transformers import (
     AutoConfig,
-    AutoModelWithLMHead,
+    AutoModelForCausalLM,
     DataCollatorForPermutationLanguageModeling,
     HfArgumentParser,
     set_seed,
@@ -79,7 +79,7 @@ def main():
     tokenizer = ExpressionBertTokenizer.from_pretrained(model_dir)
     sep = tokenizer.expression_separator
 
-    model = AutoModelWithLMHead.from_pretrained(
+    model = AutoModelForCausalLM.from_pretrained(
         model_dir, from_tf=bool(".ckpt" in model_dir), config=config
     )
     logger.info(f"Model restored from {model_dir}")

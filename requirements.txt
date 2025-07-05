@@ -1,5 +1,5 @@
-transformers==v3.1.0
-torch==1.7.1
+transformers==4.29.2
+torch==1.13.1+cu117
 tqdm
 numpy
 modlamp>=4.3.0
