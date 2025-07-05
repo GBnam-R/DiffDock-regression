@@ -1,12 +1,23 @@
 import os
 import math
 import argparse
-from typing import List, Dict, Any
+
+"""Fine-tune a Regression Transformer on DiffDock docking data.
+
+This script loads a pretrained Regression Transformer model and fine tunes it on
+a dataset created with ``create_regression_transformer_input.py``.  The
+implementation is inspired by ``scripts/run_language_modeling.py`` and
+``scripts/run_regressionhead.py``.  We load the QED pretrained weights provided
+in ``models/Diffdock_RT/pytorch_model.bin`` and train a small regression head on
+top of the model.
+"""
+
+from typing import Any, Dict, List
 
 import torch
 from torch import nn
 from torch.utils.data import Dataset, DataLoader, random_split
-from transformers import XLNetModel
+from transformers import XLNetModel, get_linear_schedule_with_warmup
 
 from terminator.tokenization import ExpressionBertTokenizer
 
@@ -44,14 +55,25 @@ class Collator:
 
 
 class RegressionTransformer(nn.Module):
-    def __init__(self, base_model: str, tokenizer: ExpressionBertTokenizer, hidden_dim: int = 256):
+    """Wrapper around ``XLNetModel`` with a small regression head."""
+
+    def __init__(self, model_path: str, tokenizer: ExpressionBertTokenizer, hidden_dim: int = 256):
         super().__init__()
-        self.transformer = XLNetModel.from_pretrained(base_model)
+        # Load pretrained weights.  ``model_path`` is expected to contain a
+        # ``pytorch_model.bin`` file as provided with the QED model.
+        self.transformer = XLNetModel.from_pretrained(model_path)
         self.transformer.resize_token_embeddings(len(tokenizer))
+
         self.comp_id = tokenizer.vocab["[comp_token]"]
         self.prot_id = tokenizer.vocab["[protein_token]"]
+
         hdim = self.transformer.config.hidden_size
-        self.out = nn.Sequential(nn.Dropout(0.1), nn.Linear(hdim, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, 1))
+        self.out = nn.Sequential(
+            nn.Dropout(0.1),
+            nn.Linear(hdim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1),
+        )
 
     def forward(self, input_ids, attention_mask, complex_emb, protein_emb):
         embeds = self.transformer.word_embedding(input_ids)
@@ -64,7 +86,9 @@ class RegressionTransformer(nn.Module):
             if p_idx.numel():
                 n = min(p_idx.numel(), protein_emb.size(1))
                 embeds[i, p_idx[:n]] = protein_emb[i, :n].to(embeds.device)
-        out = self.transformer(inputs_embeds=embeds, attention_mask=attention_mask).last_hidden_state
+        out = self.transformer(
+            inputs_embeds=embeds, attention_mask=attention_mask
+        ).last_hidden_state
         pooled = out.mean(dim=1)
         return self.out(pooled).squeeze(-1)
 
@@ -75,21 +99,29 @@ def load_dataset(path: str) -> DockingDataset:
 
 
 def train(args: argparse.Namespace) -> None:
+    """Fine tune the Regression Transformer."""
+
     tokenizer = ExpressionBertTokenizer.from_pretrained(args.tokenizer)
     dataset = load_dataset(args.dataset)
 
     collator = Collator(tokenizer)
-    val_size = max(1, int(0.2 * len(dataset)))
+    val_size = max(1, int(args.val_split * len(dataset)))
     train_size = len(dataset) - val_size
     train_ds, val_ds = random_split(dataset, [train_size, val_size])
 
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, collate_fn=collator)
+    train_loader = DataLoader(
+        train_ds, batch_size=args.batch_size, shuffle=True, collate_fn=collator
+    )
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, collate_fn=collator)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = RegressionTransformer(args.model, tokenizer, args.hidden_dim).to(device)
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    total_steps = len(train_loader) * args.epochs
+    scheduler = get_linear_schedule_with_warmup(
+        optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=total_steps
+    )
     loss_fn = nn.MSELoss()
 
     best_rmse = math.inf
@@ -107,6 +139,7 @@ def train(args: argparse.Namespace) -> None:
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            scheduler.step()
 
         model.eval()
         preds, labs = [], []
@@ -126,14 +159,29 @@ def train(args: argparse.Namespace) -> None:
 
 
 def get_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Fine-tune Regression Transformer on DiffDock dataset")
-    parser.add_argument("dataset", help="Path to dataset file created with create_regression_transformer_input.py")
+    parser = argparse.ArgumentParser(
+        description="Fine-tune Regression Transformer on DiffDock dataset"
+    )
+    parser.add_argument(
+        "dataset", help="Path to dataset file created with create_regression_transformer_input.py"
+    )
     parser.add_argument("output", help="Directory to store checkpoints")
-    parser.add_argument("--model", default="xlnet-base-cased", help="Base transformer model")
-    parser.add_argument("--tokenizer", default="vocabs/smallmolecules.txt", help="Tokenizer path")
-    parser.add_argument("--batch_size", type=int, default=8)
-    parser.add_argument("--epochs", type=int, default=10)
+    parser.add_argument(
+        "--model",
+        default="models/Diffdock_RT",
+        help="Path to pretrained Regression Transformer model",
+    )
+    parser.add_argument(
+        "--tokenizer",
+        default="models/Diffdock_RT",
+        help="Directory containing the tokenizer vocabulary",
+    )
+    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--weight_decay", type=float, default=0.0)
+    parser.add_argument("--warmup_steps", type=int, default=0)
+    parser.add_argument("--val_split", type=float, default=0.2)
     parser.add_argument("--hidden_dim", type=int, default=256)
     return parser
 
