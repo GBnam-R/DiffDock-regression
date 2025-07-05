@@ -1,0 +1,53 @@
+name: diffdock-rt
+channels:
+  - conda-forge        # 최우선으로 conda-forge를 사용!
+  - pyg
+  - nvidia
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.9.18
+  - setuptools=69.5.1
+  - prody=2.2.0          # conda-forge로 설치!
+  - rdkit=2022.03.3
+  - pandas=1.5.1
+  - scikit-learn=1.1.0
+  - scipy=1.12.0
+  - pybind11=2.11.1
+  - networkx=2.8.4
+  - pip
+  - pip:
+      # PyTorch 및 PyG, 특수 wheel(여전히 pip 설치 필요)
+      - --extra-index-url https://download.pytorch.org/whl/cu117
+      - --find-links https://pytorch-geometric.com/whl/torch-1.13.1+cu117.html
+      - torch==1.13.1+cu117
+      - torchmetrics==0.11.0
+      - torch-cluster==1.6.0+pt113cu117
+      - torch-geometric==2.2.0
+      - torch-scatter==2.1.0+pt113cu117
+      - torch-sparse==0.6.16+pt113cu117
+      - torch-spline-conv==1.2.1+pt113cu117
+
+      # 기타 pip only 패키지들
+      - dllogger @ git+https://github.com/NVIDIA/dllogger.git
+      - openfold @ git+https://github.com/aqlaboratory/openfold.git@4b41059694619831a7db195b7e0988fc4ff3a307
+      - fair-esm[esmfold]==2.0.0
+      - e3nn==0.5.1
+      - pytorch-lightning==1.9.5
+      - gradio==3.50.*
+      - requests
+      - transformers==4.29.2
+      - modlamp>=4.3.0
+      - selfies==1.0.4
+      - flake8==3.8.4
+      - mypy==0.800
+      - pytest==6.1.1
+      - pytest-cov==2.10.1
+      - black==20.8b1
+      - sphinx==3.4.3
+      - sphinx-autodoc-typehints==1.11.1
+      - better-apidoc==0.3.1
+      - sphinx_rtd_theme==0.5.1
+      - myst-parser==0.13.3
+      - flask==1.1.2
+      - flask_login==0.5.0

@@ -1,0 +1,222 @@
+Collecting transformers==4.29.2
+  Using cached transformers-4.29.2-py3-none-any.whl.metadata (112 kB)
+Collecting modlamp
+  Using cached modlamp-4.3.2-py3-none-any.whl.metadata (13 kB)
+Collecting selfies==1.0.4
+  Using cached selfies-1.0.4-py3-none-any.whl.metadata (10 kB)
+Collecting flake8==3.8.4
+  Using cached flake8-3.8.4-py2.py3-none-any.whl.metadata (3.7 kB)
+Collecting mypy==0.800
+  Downloading mypy-0.800-cp39-cp39-manylinux2010_x86_64.whl.metadata (1.5 kB)
+Collecting pytest==6.1.1
+  Using cached pytest-6.1.1-py3-none-any.whl.metadata (7.3 kB)
+Collecting pytest-cov==2.10.1
+  Using cached pytest_cov-2.10.1-py2.py3-none-any.whl.metadata (20 kB)
+Collecting black==20.8b1
+  Using cached black-20.8b1.tar.gz (1.1 MB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting sphinx==3.4.3
+  Using cached Sphinx-3.4.3-py3-none-any.whl.metadata (7.9 kB)
+Collecting sphinx-autodoc-typehints==1.11.1
+  Using cached sphinx_autodoc_typehints-1.11.1-py3-none-any.whl.metadata (6.0 kB)
+Collecting better-apidoc==0.3.1
+  Using cached better-apidoc-0.3.1.tar.gz (10 kB)
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'done'
+Collecting sphinx_rtd_theme==0.5.1
+  Using cached sphinx_rtd_theme-0.5.1-py2.py3-none-any.whl.metadata (3.6 kB)
+Collecting myst-parser==0.13.3
+  Using cached myst_parser-0.13.3-py3-none-any.whl.metadata (4.3 kB)
+Collecting flask==1.1.2
+  Using cached Flask-1.1.2-py2.py3-none-any.whl.metadata (4.6 kB)
+Collecting flask_login==0.5.0
+  Using cached Flask_Login-0.5.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Requirement already satisfied: filelock in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from transformers==4.29.2) (3.18.0)
+Requirement already satisfied: huggingface-hub<1.0,>=0.14.1 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from transformers==4.29.2) (0.33.2)
+Requirement already satisfied: numpy>=1.17 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from transformers==4.29.2) (1.26.4)
+Requirement already satisfied: packaging>=20.0 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from transformers==4.29.2) (25.0)
+Requirement already satisfied: pyyaml>=5.1 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from transformers==4.29.2) (6.0.2)
+Collecting regex!=2019.12.17 (from transformers==4.29.2)
+  Downloading regex-2024.11.6-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (40 kB)
+Requirement already satisfied: requests in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from transformers==4.29.2) (2.32.4)
+Collecting tokenizers!=0.11.3,<0.14,>=0.11.1 (from transformers==4.29.2)
+  Downloading tokenizers-0.13.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.7 kB)
+Requirement already satisfied: tqdm>=4.27 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from transformers==4.29.2) (4.67.1)
+Collecting pyflakes<2.3.0,>=2.2.0 (from flake8==3.8.4)
+  Using cached pyflakes-2.2.0-py2.py3-none-any.whl.metadata (3.9 kB)
+Collecting pycodestyle<2.7.0,>=2.6.0a1 (from flake8==3.8.4)
+  Using cached pycodestyle-2.6.0-py2.py3-none-any.whl.metadata (30 kB)
+Collecting mccabe<0.7.0,>=0.6.0 (from flake8==3.8.4)
+  Using cached mccabe-0.6.1-py2.py3-none-any.whl.metadata (4.3 kB)
+Collecting typed-ast<1.5.0,>=1.4.0 (from mypy==0.800)
+  Downloading typed_ast-1.4.3-cp39-cp39-manylinux1_x86_64.whl.metadata (1.3 kB)
+Requirement already satisfied: typing-extensions>=3.7.4 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from mypy==0.800) (4.14.1)
+Collecting mypy-extensions<0.5.0,>=0.4.3 (from mypy==0.800)
+  Using cached mypy_extensions-0.4.4.tar.gz (4.2 kB)
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'done'
+Requirement already satisfied: attrs>=17.4.0 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from pytest==6.1.1) (25.3.0)
+Collecting iniconfig (from pytest==6.1.1)
+  Using cached iniconfig-2.1.0-py3-none-any.whl.metadata (2.7 kB)
+Collecting pluggy<1.0,>=0.12 (from pytest==6.1.1)
+  Using cached pluggy-0.13.1-py2.py3-none-any.whl.metadata (15 kB)
+Collecting py>=1.8.2 (from pytest==6.1.1)
+  Using cached py-1.11.0-py2.py3-none-any.whl.metadata (2.8 kB)
+Collecting toml (from pytest==6.1.1)
+  Using cached toml-0.10.2-py2.py3-none-any.whl.metadata (7.1 kB)
+Collecting coverage>=4.4 (from pytest-cov==2.10.1)
+  Downloading coverage-7.9.2-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (8.9 kB)
+Requirement already satisfied: click>=7.1.2 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from black==20.8b1) (8.1.8)
+Collecting appdirs (from black==20.8b1)
+  Using cached appdirs-1.4.4-py2.py3-none-any.whl.metadata (9.0 kB)
+Collecting pathspec<1,>=0.6 (from black==20.8b1)
+  Using cached pathspec-0.12.1-py3-none-any.whl.metadata (21 kB)
+Collecting sphinxcontrib-applehelp (from sphinx==3.4.3)
+  Using cached sphinxcontrib_applehelp-2.0.0-py3-none-any.whl.metadata (2.3 kB)
+Collecting sphinxcontrib-devhelp (from sphinx==3.4.3)
+  Using cached sphinxcontrib_devhelp-2.0.0-py3-none-any.whl.metadata (2.3 kB)
+Collecting sphinxcontrib-jsmath (from sphinx==3.4.3)
+  Using cached sphinxcontrib_jsmath-1.0.1-py2.py3-none-any.whl.metadata (1.4 kB)
+Collecting sphinxcontrib-htmlhelp (from sphinx==3.4.3)
+  Using cached sphinxcontrib_htmlhelp-2.1.0-py3-none-any.whl.metadata (2.3 kB)
+Collecting sphinxcontrib-serializinghtml (from sphinx==3.4.3)
+  Using cached sphinxcontrib_serializinghtml-2.0.0-py3-none-any.whl.metadata (2.4 kB)
+Collecting sphinxcontrib-qthelp (from sphinx==3.4.3)
+  Using cached sphinxcontrib_qthelp-2.0.0-py3-none-any.whl.metadata (2.3 kB)
+Requirement already satisfied: Jinja2>=2.3 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from sphinx==3.4.3) (3.1.6)
+Collecting Pygments>=2.0 (from sphinx==3.4.3)
+  Using cached pygments-2.19.2-py3-none-any.whl.metadata (2.5 kB)
+Collecting docutils>=0.12 (from sphinx==3.4.3)
+  Using cached docutils-0.21.2-py3-none-any.whl.metadata (2.8 kB)
+Collecting snowballstemmer>=1.1 (from sphinx==3.4.3)
+  Using cached snowballstemmer-3.0.1-py3-none-any.whl.metadata (7.9 kB)
+Collecting babel>=1.3 (from sphinx==3.4.3)
+  Using cached babel-2.17.0-py3-none-any.whl.metadata (2.0 kB)
+Collecting alabaster<0.8,>=0.7 (from sphinx==3.4.3)
+  Using cached alabaster-0.7.16-py3-none-any.whl.metadata (2.9 kB)
+Collecting imagesize (from sphinx==3.4.3)
+  Using cached imagesize-1.4.1-py2.py3-none-any.whl.metadata (1.5 kB)
+Requirement already satisfied: setuptools in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from sphinx==3.4.3) (69.5.1)
+Collecting markdown-it-py~=0.6.0 (from myst-parser==0.13.3)
+  Using cached markdown_it_py-0.6.2-py3-none-any.whl.metadata (6.3 kB)
+Collecting mdit-py-plugins~=0.2.4 (from myst-parser==0.13.3)
+  Using cached mdit_py_plugins-0.2.8-py3-none-any.whl.metadata (2.8 kB)
+Collecting Werkzeug>=0.15 (from flask==1.1.2)
+  Using cached werkzeug-3.1.3-py3-none-any.whl.metadata (3.7 kB)
+Collecting itsdangerous>=0.24 (from flask==1.1.2)
+  Using cached itsdangerous-2.2.0-py3-none-any.whl.metadata (1.9 kB)
+Requirement already satisfied: fsspec>=2023.5.0 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from huggingface-hub<1.0,>=0.14.1->transformers==4.29.2) (2025.5.1)
+Requirement already satisfied: hf-xet<2.0.0,>=1.1.2 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from huggingface-hub<1.0,>=0.14.1->transformers==4.29.2) (1.1.5)
+Collecting attrs>=17.4.0 (from pytest==6.1.1)
+  Using cached attrs-20.3.0-py2.py3-none-any.whl.metadata (10 kB)
+INFO: pip is looking at multiple versions of mdit-py-plugins to determine which version is compatible with other requirements. This could take a while.
+Collecting mdit-py-plugins~=0.2.4 (from myst-parser==0.13.3)
+  Using cached mdit_py_plugins-0.2.7-py3-none-any.whl.metadata (2.8 kB)
+  Using cached mdit_py_plugins-0.2.6-py3-none-any.whl.metadata (2.6 kB)
+Collecting nose>=1.3.7 (from modlamp)
+  Using cached nose-1.3.7-py3-none-any.whl.metadata (1.7 kB)
+Requirement already satisfied: scipy>=0.17.0 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from modlamp) (1.12.0)
+Requirement already satisfied: matplotlib>=1.5.1 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from modlamp) (3.9.4)
+Requirement already satisfied: scikit-learn>=0.18.0 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from modlamp) (1.1.0)
+Requirement already satisfied: pandas>=0.18.1 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from modlamp) (2.3.0)
+Collecting lxml>=3.6.4 (from modlamp)
+  Downloading lxml-6.0.0-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (6.6 kB)
+Requirement already satisfied: joblib>=0.15.1 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from modlamp) (1.5.1)
+Collecting mysql-connector-python>=8.0 (from modlamp)
+  Downloading mysql_connector_python-9.3.0-cp39-cp39-manylinux_2_28_x86_64.whl.metadata (7.3 kB)
+Requirement already satisfied: MarkupSafe>=2.0 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from Jinja2>=2.3->sphinx==3.4.3) (2.1.5)
+Requirement already satisfied: contourpy>=1.0.1 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from matplotlib>=1.5.1->modlamp) (1.3.0)
+Requirement already satisfied: cycler>=0.10 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from matplotlib>=1.5.1->modlamp) (0.12.1)
+Requirement already satisfied: fonttools>=4.22.0 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from matplotlib>=1.5.1->modlamp) (4.58.5)
+Requirement already satisfied: kiwisolver>=1.3.1 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from matplotlib>=1.5.1->modlamp) (1.4.7)
+Requirement already satisfied: pillow>=8 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from matplotlib>=1.5.1->modlamp) (10.4.0)
+Requirement already satisfied: pyparsing>=2.3.1 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from matplotlib>=1.5.1->modlamp) (3.2.3)
+Requirement already satisfied: python-dateutil>=2.7 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from matplotlib>=1.5.1->modlamp) (2.9.0.post0)
+Requirement already satisfied: importlib-resources>=3.2.0 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from matplotlib>=1.5.1->modlamp) (6.5.2)
+Requirement already satisfied: zipp>=3.1.0 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from importlib-resources>=3.2.0->matplotlib>=1.5.1->modlamp) (3.23.0)
+Requirement already satisfied: pytz>=2020.1 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from pandas>=0.18.1->modlamp) (2025.2)
+Requirement already satisfied: tzdata>=2022.7 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from pandas>=0.18.1->modlamp) (2025.2)
+Requirement already satisfied: six>=1.5 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from python-dateutil>=2.7->matplotlib>=1.5.1->modlamp) (1.17.0)
+Requirement already satisfied: charset_normalizer<4,>=2 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from requests->transformers==4.29.2) (3.4.2)
+Requirement already satisfied: idna<4,>=2.5 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from requests->transformers==4.29.2) (3.10)
+Requirement already satisfied: urllib3<3,>=1.21.1 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from requests->transformers==4.29.2) (2.5.0)
+Requirement already satisfied: certifi>=2017.4.17 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from requests->transformers==4.29.2) (2025.6.15)
+Requirement already satisfied: threadpoolctl>=2.0.0 in /home/gn64/miniconda3/envs/Diffdock-RT/lib/python3.9/site-packages (from scikit-learn>=0.18.0->modlamp) (3.6.0)
+Using cached transformers-4.29.2-py3-none-any.whl (7.1 MB)
+Using cached selfies-1.0.4-py3-none-any.whl (30 kB)
+Using cached flake8-3.8.4-py2.py3-none-any.whl (72 kB)
+Downloading mypy-0.800-cp39-cp39-manylinux2010_x86_64.whl (22.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 22.6/22.6 MB 2.3 MB/s eta 0:00:00
+Using cached pytest-6.1.1-py3-none-any.whl (272 kB)
+Using cached pytest_cov-2.10.1-py2.py3-none-any.whl (19 kB)
+Using cached Sphinx-3.4.3-py3-none-any.whl (2.9 MB)
+Using cached sphinx_autodoc_typehints-1.11.1-py3-none-any.whl (8.7 kB)
+Using cached sphinx_rtd_theme-0.5.1-py2.py3-none-any.whl (2.8 MB)
+Using cached myst_parser-0.13.3-py3-none-any.whl (44 kB)
+Using cached Flask-1.1.2-py2.py3-none-any.whl (94 kB)
+Using cached Flask_Login-0.5.0-py2.py3-none-any.whl (16 kB)
+Using cached alabaster-0.7.16-py3-none-any.whl (13 kB)
+Using cached markdown_it_py-0.6.2-py3-none-any.whl (81 kB)
+Using cached attrs-20.3.0-py2.py3-none-any.whl (49 kB)
+Using cached mccabe-0.6.1-py2.py3-none-any.whl (8.6 kB)
+Using cached mdit_py_plugins-0.2.6-py3-none-any.whl (39 kB)
+Using cached pathspec-0.12.1-py3-none-any.whl (31 kB)
+Using cached pluggy-0.13.1-py2.py3-none-any.whl (18 kB)
+Using cached pycodestyle-2.6.0-py2.py3-none-any.whl (41 kB)
+Using cached pyflakes-2.2.0-py2.py3-none-any.whl (66 kB)
+Downloading tokenizers-0.13.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (7.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.8/7.8 MB 2.1 MB/s eta 0:00:00
+Downloading typed_ast-1.4.3-cp39-cp39-manylinux1_x86_64.whl (769 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 769.2/769.2 kB 1.8 MB/s eta 0:00:00
+Using cached modlamp-4.3.2-py3-none-any.whl (176 kB)
+Using cached babel-2.17.0-py3-none-any.whl (10.2 MB)
+Downloading coverage-7.9.2-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl (240 kB)
+Using cached docutils-0.21.2-py3-none-any.whl (587 kB)
+Using cached itsdangerous-2.2.0-py3-none-any.whl (16 kB)
+Downloading lxml-6.0.0-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (5.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.3/5.3 MB 2.1 MB/s eta 0:00:00
+Downloading mysql_connector_python-9.3.0-cp39-cp39-manylinux_2_28_x86_64.whl (33.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 33.8/33.8 MB 1.9 MB/s eta 0:00:00
+Using cached nose-1.3.7-py3-none-any.whl (154 kB)
+Using cached py-1.11.0-py2.py3-none-any.whl (98 kB)
+Using cached pygments-2.19.2-py3-none-any.whl (1.2 MB)
+Downloading regex-2024.11.6-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (780 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 780.9/780.9 kB 2.3 MB/s eta 0:00:00
+Using cached snowballstemmer-3.0.1-py3-none-any.whl (103 kB)
+Using cached toml-0.10.2-py2.py3-none-any.whl (16 kB)
+Using cached werkzeug-3.1.3-py3-none-any.whl (224 kB)
+Using cached appdirs-1.4.4-py2.py3-none-any.whl (9.6 kB)
+Using cached imagesize-1.4.1-py2.py3-none-any.whl (8.8 kB)
+Using cached iniconfig-2.1.0-py3-none-any.whl (6.0 kB)
+Using cached sphinxcontrib_applehelp-2.0.0-py3-none-any.whl (119 kB)
+Using cached sphinxcontrib_devhelp-2.0.0-py3-none-any.whl (82 kB)
+Using cached sphinxcontrib_htmlhelp-2.1.0-py3-none-any.whl (98 kB)
+Using cached sphinxcontrib_jsmath-1.0.1-py2.py3-none-any.whl (5.1 kB)
+Using cached sphinxcontrib_qthelp-2.0.0-py3-none-any.whl (88 kB)
+Using cached sphinxcontrib_serializinghtml-2.0.0-py3-none-any.whl (92 kB)
+Building wheels for collected packages: black, better-apidoc, mypy-extensions
+  Building wheel for black (pyproject.toml): started
+  Building wheel for black (pyproject.toml): finished with status 'done'
+  Created wheel for black: filename=black-20.8b1-py3-none-any.whl size=124273 sha256=6a17e7497d965ce5d3f4deb08bff37dd3db782b132f91687274eebfa994b8b04
+  Stored in directory: /home/gn64/.cache/pip/wheels/4e/57/9a/e704bdd859ee892dc46fff03fd499422dc9e99fd9bd5c446d3
+  Building wheel for better-apidoc (setup.py): started
+  Building wheel for better-apidoc (setup.py): finished with status 'done'
+  Created wheel for better-apidoc: filename=better_apidoc-0.3.1-py3-none-any.whl size=10557 sha256=645e0643b8aa924233d55981209c6f3f45f1f8ec39aac5108ea3dd46f85e73c4
+  Stored in directory: /home/gn64/.cache/pip/wheels/c6/a0/c4/1b67f8ebe358bf45b391d009bc89546112861627527f9cb58b
+  Building wheel for mypy-extensions (setup.py): started
+  Building wheel for mypy-extensions (setup.py): finished with status 'done'
+  Created wheel for mypy-extensions: filename=mypy_extensions-0.4.4-py2.py3-none-any.whl size=4469 sha256=cc4da81c74d5d4f874dba8f87e2086254207f746018625694c2ba45f16f032fb
+  Stored in directory: /home/gn64/.cache/pip/wheels/5e/53/31/a2f6574f22c8f2d131a5ab0b5f59fa04bc9666517f214243c9
+Successfully built black better-apidoc mypy-extensions
+Installing collected packages: typed-ast, tokenizers, nose, mccabe, appdirs, Werkzeug, toml, sphinxcontrib-serializinghtml, sphinxcontrib-qthelp, sphinxcontrib-jsmath, sphinxcontrib-htmlhelp, sphinxcontrib-devhelp, sphinxcontrib-applehelp, snowballstemmer, selfies, regex, Pygments, pyflakes, pycodestyle, py, pluggy, pathspec, mysql-connector-python, mypy-extensions, lxml, itsdangerous, iniconfig, imagesize, docutils, coverage, babel, attrs, alabaster, sphinx, pytest, mypy, flask, flake8, black, transformers, sphinx_rtd_theme, sphinx-autodoc-typehints, pytest-cov, modlamp, flask_login, better-apidoc, mdit-py-plugins, markdown-it-py, myst-parser
+  Attempting uninstall: attrs
+    Found existing installation: attrs 25.3.0
+    Uninstalling attrs-25.3.0:
+      Successfully uninstalled attrs-25.3.0
+
+Successfully installed Pygments-2.19.2 Werkzeug-3.1.3 alabaster-0.7.16 appdirs-1.4.4 attrs-20.3.0 babel-2.17.0 better-apidoc-0.3.1 black-20.8b1 coverage-7.9.2 docutils-0.21.2 flake8-3.8.4 flask-1.1.2 flask_login-0.5.0 imagesize-1.4.1 iniconfig-2.1.0 itsdangerous-2.2.0 lxml-6.0.0 markdown-it-py-0.6.2 mccabe-0.6.1 mdit-py-plugins-0.2.6 modlamp-4.3.2 mypy-0.800 mypy-extensions-0.4.4 mysql-connector-python-9.3.0 myst-parser-0.13.3 nose-1.3.7 pathspec-0.12.1 pluggy-0.13.1 py-1.11.0 pycodestyle-2.6.0 pyflakes-2.2.0 pytest-6.1.1 pytest-cov-2.10.1 regex-2024.11.6 selfies-1.0.4 snowballstemmer-3.0.1 sphinx-3.4.3 sphinx-autodoc-typehints-1.11.1 sphinx_rtd_theme-0.5.1 sphinxcontrib-applehelp-2.0.0 sphinxcontrib-devhelp-2.0.0 sphinxcontrib-htmlhelp-2.1.0 sphinxcontrib-jsmath-1.0.1 sphinxcontrib-qthelp-2.0.0 sphinxcontrib-serializinghtml-2.0.0 tokenizers-0.13.3 toml-0.10.2 transformers-4.29.2 typed-ast-1.4.3
