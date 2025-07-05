@@ -5,11 +5,11 @@ import argparse
 """Fine-tune a Regression Transformer on DiffDock docking data.
 
 This script loads a pretrained Regression Transformer model and fine tunes it on
-a dataset created with ``create_regression_transformer_input.py``.  The
-implementation is inspired by ``scripts/run_language_modeling.py`` and
-``scripts/run_regressionhead.py``.  We load the QED pretrained weights provided
-in ``models/Diffdock_RT/pytorch_model.bin`` and train a small regression head on
-top of the model.
+a dataset created with ``create_regression_transformer_input.py``. The
+implementation is inspired by ``scripts/run_language_modeling.py``. Earlier
+versions added a small regression head on top of the model, but that head has
+now been removed so that training follows a standard language modelling
+objective.
 """
 
 from typing import Any, Dict, List
@@ -17,7 +17,7 @@ from typing import Any, Dict, List
 import torch
 from torch import nn
 from torch.utils.data import Dataset, DataLoader, random_split
-from transformers import XLNetModel, get_linear_schedule_with_warmup
+from transformers import XLNetLMHeadModel, get_linear_schedule_with_warmup
 
 from terminator.tokenization import ExpressionBertTokenizer
 
@@ -55,28 +55,20 @@ class Collator:
 
 
 class RegressionTransformer(nn.Module):
-    """Wrapper around ``XLNetModel`` with a small regression head."""
+    """XLNetLMHeadModel with embedding injection for complex and protein tokens."""
 
-    def __init__(self, model_path: str, tokenizer: ExpressionBertTokenizer, hidden_dim: int = 256):
+    def __init__(self, model_path: str, tokenizer: ExpressionBertTokenizer):
         super().__init__()
-        # Load pretrained weights.  ``model_path`` is expected to contain a
+        # Load pretrained weights. ``model_path`` should contain a
         # ``pytorch_model.bin`` file as provided with the QED model.
-        self.transformer = XLNetModel.from_pretrained(model_path)
+        self.transformer = XLNetLMHeadModel.from_pretrained(model_path)
         self.transformer.resize_token_embeddings(len(tokenizer))
 
         self.comp_id = tokenizer.vocab["[comp_token]"]
         self.prot_id = tokenizer.vocab["[protein_token]"]
 
-        hdim = self.transformer.config.hidden_size
-        self.out = nn.Sequential(
-            nn.Dropout(0.1),
-            nn.Linear(hdim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 1),
-        )
-
-    def forward(self, input_ids, attention_mask, complex_emb, protein_emb):
-        embeds = self.transformer.word_embedding(input_ids)
+    def forward(self, input_ids, attention_mask, complex_emb, protein_emb, labels=None):
+        embeds = self.transformer.transformer.word_embedding(input_ids)
         for i in range(input_ids.size(0)):
             c_idx = (input_ids[i] == self.comp_id).nonzero(as_tuple=True)[0]
             p_idx = (input_ids[i] == self.prot_id).nonzero(as_tuple=True)[0]
@@ -86,11 +78,11 @@ class RegressionTransformer(nn.Module):
             if p_idx.numel():
                 n = min(p_idx.numel(), protein_emb.size(1))
                 embeds[i, p_idx[:n]] = protein_emb[i, :n].to(embeds.device)
-        out = self.transformer(
-            inputs_embeds=embeds, attention_mask=attention_mask
-        ).last_hidden_state
-        pooled = out.mean(dim=1)
-        return self.out(pooled).squeeze(-1)
+        return self.transformer(
+            inputs_embeds=embeds,
+            attention_mask=attention_mask,
+            labels=labels,
+        )
 
 
 def load_dataset(path: str) -> DockingDataset:
@@ -112,12 +104,16 @@ def train(args: argparse.Namespace) -> None:
     train_loader = DataLoader(
         train_ds, batch_size=args.batch_size, shuffle=True, collate_fn=collator
     )
-    val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, collate_fn=collator)
+    val_loader = DataLoader(
+        val_ds, batch_size=args.batch_size, shuffle=False, collate_fn=collator
+    )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = RegressionTransformer(args.model, tokenizer, args.hidden_dim).to(device)
+    model = RegressionTransformer(args.model, tokenizer).to(device)
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=args.lr, weight_decay=args.weight_decay
+    )
     total_steps = len(train_loader) * args.epochs
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=total_steps
@@ -163,7 +159,8 @@ def get_parser() -> argparse.ArgumentParser:
         description="Fine-tune Regression Transformer on DiffDock dataset"
     )
     parser.add_argument(
-        "dataset", help="Path to dataset file created with create_regression_transformer_input.py"
+        "dataset",
+        help="Path to dataset file created with create_regression_transformer_input.py",
     )
     parser.add_argument("output", help="Directory to store checkpoints")
     parser.add_argument(
@@ -182,7 +179,6 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument("--weight_decay", type=float, default=0.0)
     parser.add_argument("--warmup_steps", type=int, default=0)
     parser.add_argument("--val_split", type=float, default=0.2)
-    parser.add_argument("--hidden_dim", type=int, default=256)
     return parser
 
 
