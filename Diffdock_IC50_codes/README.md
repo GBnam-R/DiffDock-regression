@@ -251,7 +251,9 @@ python Diffdock_IC50_codes/finetune_regression_transformer.py dataset.pt run_dir
 To generate a dataset including docking and ESMFold embeddings run:
 
 ```bash
-python create_regression_transformer_input.py Diffdock_output Diffdock_output/Regression_transformer_input.csv dataset.pt
+python create_regression_transformer_input.py \
+    --out_dir Diffdock_output \
+    --protein_ligand_csv Diffdock_output/Regression_transformer_input.csv
 ```
 
 Each record stores embeddings for:

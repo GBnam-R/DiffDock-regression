@@ -115,12 +115,14 @@ python scripts/create_vocabulary.py examples/qed_property_example.txt examples/v
 #### Create dataset from DiffDock results
 DiffDock docking outputs can be converted into RT inputs with:
 ```console
-python create_regression_transformer_input.py Diffdock_output Diffdock_output/Regression_transformer_input.csv dataset.pt
+python create_regression_transformer_input.py \
+    --out_dir Diffdock_output \
+    --protein_ligand_csv Diffdock_output/Regression_transformer_input.csv
 ```
-The resulting ``dataset.pt`` contains tokenized sequences plus arrays with complex
-and protein embeddings. Placeholder tokens ``[comp_token]`` and
-``[protein_token]`` are automatically added to the vocabulary and replaced with
-these embeddings during training.
+The resulting ``dataset.pt`` (written inside ``Diffdock_output`` by default)
+contains tokenized sequences plus arrays with complex and protein embeddings.
+Placeholder tokens ``[comp_token]`` and ``[protein_token]`` are automatically
+added to the vocabulary and replaced with these embeddings during training.
 
 At this point the folder containing the vocabulary file can be used to load a tokenizer compatible with any `ExpressionBertTokenizer`:
 ```python

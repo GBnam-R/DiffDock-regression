@@ -12,7 +12,7 @@ placeholders are replaced with the embeddings stored in the same record.
 
 import argparse
 import os
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -26,7 +26,8 @@ from terminator.tokenization import (
 )
 
 
-def load_npy(path: str) -> np.ndarray | None:
+def load_npy(path: str) -> Optional[np.ndarray]:
+    """Load numpy array from ``path`` if it exists."""
     return np.load(path) if os.path.exists(path) else None
 
 
@@ -119,7 +120,9 @@ def build_sequence(pIC50: float, smiles: str) -> List[str]:
     return tokens
 
 
-def process_record(row: Dict[str, any], root_dir: str, tokenizer: ExpressionBertTokenizer) -> Dict:
+def process_record(
+    row: Dict[str, any], root_dir: str, tokenizer: ExpressionBertTokenizer
+) -> Dict:
     pIC50 = float(row["pchembl_value_Mean"])
     smiles = row["SMILES"]
     name = f"{row['InChIKey']}_{row['Uniprot_ID']}_{row['PDB_code']}"
@@ -139,24 +142,53 @@ def process_record(row: Dict[str, any], root_dir: str, tokenizer: ExpressionBert
     }
 
 
-def main():
+def get_parser() -> argparse.ArgumentParser:
+    """Return CLI argument parser."""
     parser = argparse.ArgumentParser(
         description="Create Regression Transformer input from DiffDock results"
     )
-    parser.add_argument("diffdock_dir", help="Directory with DiffDock outputs")
-    parser.add_argument("csv_file", help="Regression_transformer_input.csv path")
-    parser.add_argument("output", help="Output dataset file")
-    args = parser.parse_args()
+    parser.add_argument(
+        "--protein_ligand_csv",
+        type=str,
+        required=True,
+        help="CSV file with docking results and metadata",
+    )
+    parser.add_argument(
+        "--out_dir",
+        type=str,
+        required=True,
+        help="Directory with DiffDock outputs where dataset will be saved",
+    )
+    parser.add_argument(
+        "--dataset_file",
+        type=str,
+        default="dataset.pt",
+        help="Name of the generated dataset file",
+    )
+    return parser
+
+
+def main(args: argparse.Namespace) -> None:
+    diffdock_dir = args.out_dir
+    csv_file = args.protein_ligand_csv
+    output_path = (
+        args.dataset_file
+        if os.path.isabs(args.dataset_file)
+        else os.path.join(diffdock_dir, args.dataset_file)
+    )
 
     tokenizer = ExpressionBertTokenizer.from_pretrained("qed_model")
-    added = tokenizer.add_tokens(["[comp_token]", "[protein_token]", "<complex>", "<protein>", "<pic50>"])
+    added = tokenizer.add_tokens(
+        ["[comp_token]", "[protein_token]", "<complex>", "<protein>", "<pic50>"]
+    )
     if added:
         print(f"Added {added} tokens to tokenizer")
 
-    df = pd.read_csv(args.csv_file)
-    records = [process_record(row, args.diffdock_dir, tokenizer) for _, row in df.iterrows()]
-    torch.save(records, args.output)
+    df = pd.read_csv(csv_file)
+    records = [process_record(row, diffdock_dir, tokenizer) for _, row in df.iterrows()]
+    torch.save(records, output_path)
 
 
 if __name__ == "__main__":
-    main()
+    parser = get_parser()
+    main(parser.parse_args())
