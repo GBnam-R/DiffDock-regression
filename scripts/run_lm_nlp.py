@@ -19,9 +19,9 @@ import torch
 import transformers
 from transformers import (
     CONFIG_MAPPING,
-    MODEL_WITH_LM_HEAD_MAPPING,
+    MODEL_FOR_CAUSAL_LM_MAPPING,
     AutoConfig,
-    AutoModelWithLMHead,
+    AutoModelForCausalLM,
     DataCollatorForLanguageModeling,
     DataCollatorForPermutationLanguageModeling,
     HfArgumentParser,
@@ -42,7 +42,7 @@ from terminator.utils import get_latest_checkpoint
 
 logger = logging.getLogger(__name__)
 
-MODEL_CONFIG_CLASSES = list(MODEL_WITH_LM_HEAD_MAPPING.keys())
+MODEL_CONFIG_CLASSES = list(MODEL_FOR_CAUSAL_LM_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
 

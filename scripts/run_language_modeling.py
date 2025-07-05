@@ -19,9 +19,9 @@ import torch
 import transformers
 from transformers import (
     CONFIG_MAPPING,
-    MODEL_WITH_LM_HEAD_MAPPING,
+    MODEL_FOR_CAUSAL_LM_MAPPING,
     AutoConfig,
-    AutoModelWithLMHead,
+    AutoModelForCausalLM,
     DataCollatorForLanguageModeling,
     DataCollatorForPermutationLanguageModeling,
     HfArgumentParser,
@@ -43,7 +43,7 @@ transformers.logging.set_verbosity_info()
 logger = logging.getLogger(__name__)
 # logger.setLevel(level=logging.DEBUG)
 
-MODEL_CONFIG_CLASSES = list(MODEL_WITH_LM_HEAD_MAPPING.keys())
+MODEL_CONFIG_CLASSES = list(MODEL_FOR_CAUSAL_LM_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
 
@@ -200,7 +200,7 @@ def main():
                 must_contain=train_config.get("checkpoint-str", "best"),
             )
 
-        model = AutoModelWithLMHead.from_pretrained(
+        model = AutoModelForCausalLM.from_pretrained(
             model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
@@ -223,7 +223,7 @@ def main():
 
     else:
         logger.info("Training new model from scratch")
-        model = AutoModelWithLMHead.from_config(config)
+        model = AutoModelForCausalLM.from_config(config)
 
     logger.info(f"PyTorch version: {torch.__version__}")
     model.resize_token_embeddings(len(tokenizer))
