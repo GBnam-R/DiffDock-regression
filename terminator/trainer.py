@@ -965,7 +965,9 @@ class CustomTrainer(Trainer):
         )
 
         logger.info("***** Running training *****")
-        logger.info(f"Model device {model.device}")
+        # Use the device specified in the training arguments rather than trying
+        # to access a potentially non-existent attribute on the model.
+        logger.info(f"Model device {self.args.device}")
         logger.info("  Num examples = %d", self.num_examples(train_dataloader))
         logger.info("  Num Epochs = %d", num_train_epochs)
         logger.info(
