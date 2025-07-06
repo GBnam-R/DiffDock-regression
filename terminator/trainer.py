@@ -172,11 +172,12 @@ class CustomTrainer(Trainer):
                     f"Combination of alternate steps {self.alternate_steps} and logging"
                     f" steps ({self.args.logging_steps}) would break best-model-saving."
                 )
+            eval_steps = self.args.eval_accumulation_steps or 1
             if (
                 self.args.gradient_accumulation_steps > self.alternate_steps
-                or self.args.eval_accumulation_steps > self.alternate_steps
+                or eval_steps > self.alternate_steps
                 or self.alternate_steps % self.args.gradient_accumulation_steps != 0
-                or self.alternate_steps % self.args.eval_accumulation_steps != 0
+                or self.alternate_steps % eval_steps != 0
             ):
                 raise ValueError(
                     f"Combination of alternate steps ({self.alternate_steps}) & gradient"
