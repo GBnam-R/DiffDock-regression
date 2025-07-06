@@ -160,7 +160,14 @@ def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
-    if training_args.local_rank != -1 and not torch.distributed.is_initialized():
+    world_size_env = os.environ.get("WORLD_SIZE")
+    world_size = int(world_size_env) if world_size_env is not None else 1
+
+    if (
+        training_args.local_rank != -1
+        and world_size > 1
+        and not torch.distributed.is_initialized()
+    ):
         backend = "nccl" if torch.cuda.is_available() else "gloo"
         torch.distributed.init_process_group(backend=backend)
         torch.cuda.set_device(training_args.local_rank)
