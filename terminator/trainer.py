@@ -61,6 +61,20 @@ class CustomTrainer(Trainer):
         # Call parent class constructor
         super().__init__(*args, **kwargs)
 
+        # Initialize tensorboard writer if not already done by the parent class
+        if not hasattr(self, "tb_writer"):
+            try:
+                from torch.utils.tensorboard import SummaryWriter
+
+                logging_dir = getattr(self.args, "logging_dir", None)
+                if logging_dir and self.is_world_process_zero():
+                    os.makedirs(logging_dir, exist_ok=True)
+                    self.tb_writer = SummaryWriter(log_dir=logging_dir)
+                else:
+                    self.tb_writer = None
+            except Exception:
+                self.tb_writer = None
+
         # Extract custom arguments
         self.verbose_evaluation = child_kwargs.get("verbose_evaluation", True)
         logger.info(f"Verbose evaluation {self.verbose_evaluation}")
