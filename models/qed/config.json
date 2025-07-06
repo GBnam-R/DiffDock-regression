@@ -40,5 +40,6 @@
   "untie_r": true,
   "use_ne": true,
   "vmax": 1.0,
-  "vocab_size": 507
+"vocab_size": 507
+ ,"tokenizer_class": "ExpressionBertTokenizer"
 }
