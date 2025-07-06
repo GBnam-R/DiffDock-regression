@@ -85,6 +85,48 @@ class RegressionTransformer(nn.Module):
         )
 
 
+def decode_property(
+    logits: torch.Tensor, input_ids: torch.Tensor, tokenizer: ExpressionBertTokenizer
+) -> torch.Tensor:
+    """Decode predicted pIC50 values from model logits.
+
+    The sequence begins with ``<pic50>`` followed by digit tokens until the
+    first ``|`` token. This function extracts the predicted tokens at those
+    positions and converts them into a float using
+    ``tokenizer.floating_tokens_to_float``.
+
+    Args:
+        logits: Tensor of shape ``(batch, seq_len, vocab_size)``.
+        input_ids: Tensor of token ids used as input.
+        tokenizer: Tokenizer providing ``floating_tokens_to_float``.
+
+    Returns:
+        Tensor of shape ``(batch,)`` with the predicted floating point values.
+    """
+    preds = []
+    pic50_id = tokenizer.vocab.get("<pic50>")
+    sep_id = tokenizer.vocab.get("|")
+
+    token_preds = torch.argmax(logits, dim=-1)
+
+    for tok_pred, ids in zip(token_preds, input_ids):
+        start_idx = (ids == pic50_id).nonzero(as_tuple=True)
+        if start_idx[0].numel() == 0:
+            preds.append(torch.tensor(float("nan"), device=logits.device))
+            continue
+        start = start_idx[0].item() + 1
+        end_rel = (ids[start:] == sep_id).nonzero(as_tuple=True)
+        end = start + end_rel[0].item() if end_rel[0].numel() else ids.size(0)
+        pred_tokens = tokenizer.convert_ids_to_tokens(tok_pred[start:end].tolist())
+        preds.append(
+            torch.tensor(
+                tokenizer.floating_tokens_to_float(pred_tokens), device=logits.device
+            )
+        )
+
+    return torch.stack(preds)
+
+
 def load_dataset(path: str) -> DockingDataset:
     records = torch.load(path)
     return DockingDataset(records)
@@ -93,7 +135,10 @@ def load_dataset(path: str) -> DockingDataset:
 def train(args: argparse.Namespace) -> None:
     """Fine tune the Regression Transformer."""
 
-    tokenizer = ExpressionBertTokenizer.from_pretrained(args.tokenizer)
+    vocab_path = args.tokenizer
+    if os.path.isdir(vocab_path):
+        vocab_path = os.path.join(vocab_path, "vocab.txt")
+    tokenizer = ExpressionBertTokenizer(vocab_path)
     dataset = load_dataset(args.dataset)
 
     collator = Collator(tokenizer)
@@ -130,8 +175,9 @@ def train(args: argparse.Namespace) -> None:
             cemb = cemb.to(device)
             pemb = pemb.to(device)
             labels = labels.to(device)
-            pred = model(**enc, complex_emb=cemb, protein_emb=pemb)
-            loss = loss_fn(pred, labels)
+            output = model(**enc, complex_emb=cemb, protein_emb=pemb)
+            preds = decode_property(output.logits, enc["input_ids"], tokenizer)
+            loss = loss_fn(preds, labels)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -144,8 +190,9 @@ def train(args: argparse.Namespace) -> None:
                 enc = {k: v.to(device) for k, v in enc.items()}
                 cemb = cemb.to(device)
                 pemb = pemb.to(device)
-                pred = model(**enc, complex_emb=cemb, protein_emb=pemb)
-                preds.extend(pred.cpu().tolist())
+                output = model(**enc, complex_emb=cemb, protein_emb=pemb)
+                pred_vals = decode_property(output.logits, enc["input_ids"], tokenizer)
+                preds.extend(pred_vals.cpu().tolist())
                 labs.extend(labels.tolist())
         rmse = math.sqrt(sum((p - l) ** 2 for p, l in zip(preds, labs)) / len(labs))
         if rmse < best_rmse:
