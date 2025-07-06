@@ -925,6 +925,9 @@ class CustomTrainer(Trainer):
 
         # Distributed training (should be after apex fp16 initialization)
         if self.args.local_rank != -1:
+            if not torch.distributed.is_initialized():
+                backend = "nccl" if torch.cuda.is_available() else "gloo"
+                torch.distributed.init_process_group(backend=backend)
             model = torch.nn.parallel.DistributedDataParallel(
                 model,
                 device_ids=[self.args.local_rank],
