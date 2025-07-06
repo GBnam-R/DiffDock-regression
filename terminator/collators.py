@@ -17,6 +17,23 @@ logger = logging.get_logger(__name__)
 
 @dataclass
 class BaseCollator(DataCollatorForPermutationLanguageModeling):
+    def _tensorize_batch(
+        self, examples: List[Union[List[int], torch.Tensor]]
+    ) -> torch.Tensor:
+        """Pad variable length sequences and convert them to a tensor."""
+
+        if isinstance(examples[0], torch.Tensor):
+            return torch.nn.utils.rnn.pad_sequence(
+                examples,
+                batch_first=True,
+                padding_value=self.tokenizer.pad_token_id,
+            )
+
+        return torch.nn.utils.rnn.pad_sequence(
+            [torch.tensor(e, dtype=torch.long) for e in examples],
+            batch_first=True,
+            padding_value=self.tokenizer.pad_token_id,
+        )
     def finalize(self, batch: torch.Tensor, val: int = 0) -> torch.Tensor:
         """Sequence length has to be even for PLM collator, see:
         https://github.com/huggingface/transformers/issues/7341
