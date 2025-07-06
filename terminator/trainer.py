@@ -592,7 +592,7 @@ class CustomTrainer(Trainer):
         inputs_host: Union[torch.Tensor, List[torch.Tensor]] = None
 
         world_size = 1
-        if self.args.local_rank != -1:
+        if self.args.local_rank != -1 and torch.distributed.is_initialized():
             world_size = torch.distributed.get_world_size()
         world_size = max(1, world_size)
 
@@ -762,9 +762,9 @@ class CustomTrainer(Trainer):
         """
         if tensors is None:
             return
-        elif self.args.local_rank != -1:
+        elif self.args.local_rank != -1 and torch.distributed.is_initialized():
             tensors = distributed_concat(tensors)
-
+        
         return nested_numpify(tensors)
 
     def log(self, logs: Dict[str, float], iterator: Optional[tqdm] = None) -> None:
@@ -924,7 +924,7 @@ class CustomTrainer(Trainer):
         model = self.model
 
         # Distributed training (should be after apex fp16 initialization)
-        if self.args.local_rank != -1:
+        if self.args.local_rank != -1 and os.environ.get("RANK") is not None:
             if not torch.distributed.is_initialized():
                 backend = "nccl" if torch.cuda.is_available() else "gloo"
                 torch.distributed.init_process_group(backend=backend)
@@ -943,7 +943,11 @@ class CustomTrainer(Trainer):
         total_train_batch_size = (
             self.args.train_batch_size
             * self.args.gradient_accumulation_steps
-            * (torch.distributed.get_world_size() if self.args.local_rank != -1 else 1)
+            * (
+                torch.distributed.get_world_size()
+                if self.args.local_rank != -1 and torch.distributed.is_initialized()
+                else 1
+            )
         )
 
         logger.info("***** Running training *****")

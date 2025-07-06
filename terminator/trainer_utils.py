@@ -266,6 +266,9 @@ def distributed_concat(
             return type(tensor)(
                 distributed_concat(t, num_total_examples) for t in tensor
             )
+        if not torch.distributed.is_initialized():
+            raise AssertionError("Not currently using distributed training")
+
         output_tensors = [
             tensor.clone() for _ in range(torch.distributed.get_world_size())
         ]

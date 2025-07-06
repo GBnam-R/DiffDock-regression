@@ -166,6 +166,7 @@ def main():
     if (
         training_args.local_rank != -1
         and world_size > 1
+        and os.environ.get("RANK") is not None
         and not torch.distributed.is_initialized()
     ):
         backend = "nccl" if torch.cuda.is_available() else "gloo"
