@@ -53,6 +53,28 @@ class BaseCollator(DataCollatorForPermutationLanguageModeling):
         attention_mask = (~(batch == 0)).to(float)
         return attention_mask
 
+    def _tensorize_batch(
+        self, examples: List[Union[List[int], torch.Tensor]]
+    ) -> torch.Tensor:
+        """Convert a list of token lists to a tensor.
+
+        Args:
+            examples (List[Union[List[int], torch.Tensor]]): tokenized inputs
+                with equal sequence length.
+
+        Returns:
+            torch.Tensor: Tensorized batch of shape ``(batch_size, seq_len)``.
+        """
+
+        if isinstance(examples[0], torch.Tensor):
+            return torch.stack(examples, dim=0)
+
+        length = len(examples[0])
+        if any(len(x) != length for x in examples):
+            raise ValueError("All examples must have the same length")
+
+        return torch.tensor(examples, dtype=torch.long)
+
     def __call__(
         self, examples: List[Union[List[int], torch.Tensor, Dict[str, torch.Tensor]]]
     ) -> Dict[str, torch.Tensor]:
