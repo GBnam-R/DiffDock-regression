@@ -1,25 +1,20 @@
 import os
-import math
-import argparse
-
-"""Fine-tune a Regression Transformer on DiffDock docking data.
-
-This script loads a pretrained Regression Transformer model and fine tunes it on
-a dataset created with ``create_regression_transformer_input.py``. The
-implementation is inspired by ``scripts/run_language_modeling.py``. Earlier
-versions added a small regression head on top of the model, but that head has
-now been removed so that training follows a standard language modelling
-objective.
-"""
-
-from typing import Any, Dict, List
+import json
+from dataclasses import dataclass, field
+from typing import Any, Dict, Iterable, List, Optional
 
 import torch
 from torch import nn
-from torch.utils.data import Dataset, DataLoader, random_split
-from transformers import XLNetLMHeadModel, get_linear_schedule_with_warmup
+from torch.utils.data import Dataset, random_split
+from transformers import (
+    HfArgumentParser,
+    TrainingArguments,
+    XLNetLMHeadModel,
+)
 
+from terminator.collators import TRAIN_COLLATORS
 from terminator.tokenization import ExpressionBertTokenizer
+from terminator.trainer import CustomTrainer, get_trainer_dict
 
 
 class DockingDataset(Dataset):
@@ -33,25 +28,39 @@ class DockingDataset(Dataset):
 
     def __getitem__(self, idx: int):
         rec = self.records[idx]
-        ids = torch.tensor(rec["input_ids"], dtype=torch.long)
-        cemb = torch.tensor(rec["complex_emb"], dtype=torch.float32)
-        pemb = torch.tensor(rec["protein_emb"], dtype=torch.float32)
-        label = torch.tensor(float(rec["pIC50"]), dtype=torch.float32)
-        return ids, cemb, pemb, label
+        return {
+            "input_ids": rec["input_ids"],
+            "complex_emb": rec["complex_emb"],
+            "protein_emb": rec["protein_emb"],
+            "prop_value": float(rec["pIC50"]),
+        }
 
 
-class Collator:
-    def __init__(self, tokenizer: ExpressionBertTokenizer):
-        self.tokenizer = tokenizer
+class EmbeddingCollator:
+    """Wrapper collator injecting DiffDock embeddings."""
 
-    def __call__(self, batch):
-        ids = [b[0] for b in batch]
-        cemb = torch.stack([b[1] for b in batch])
-        pemb = torch.stack([b[2] for b in batch])
-        labels = torch.stack([b[3] for b in batch])
+    def __init__(self, base_collator):
+        self.base_collator = base_collator
+        self.num_primed = getattr(base_collator, "num_primed", 1)
+        self.property_tokens = getattr(base_collator, "property_tokens", None)
 
-        enc = self.tokenizer.pad({"input_ids": ids}, return_tensors="pt")
-        return enc, cemb, pemb, labels
+    def __call__(self, batch: List[Dict[str, Any]]):
+        inputs = [b["input_ids"] for b in batch]
+        collated = self.base_collator(inputs)
+
+        cemb = torch.stack([torch.tensor(b["complex_emb"], dtype=torch.float32) for b in batch])
+        pemb = torch.stack([torch.tensor(b["protein_emb"], dtype=torch.float32) for b in batch])
+
+        cemb = cemb.repeat_interleave(self.num_primed, dim=0)
+        pemb = pemb.repeat_interleave(self.num_primed, dim=0)
+
+        collated["complex_emb"] = cemb
+        collated["protein_emb"] = pemb
+        collated["prop_value"] = torch.tensor([b["prop_value"] for b in batch], dtype=torch.float32).repeat_interleave(
+            self.num_primed
+        )
+
+        return collated
 
 
 class RegressionTransformer(nn.Module):
@@ -132,104 +141,94 @@ def load_dataset(path: str) -> DockingDataset:
     return DockingDataset(records)
 
 
-def train(args: argparse.Namespace) -> None:
-    """Fine tune the Regression Transformer."""
+@dataclass
+class ModelArguments:
+    model_name_or_path: str = field(default="models/Diffdock_RT")
+    tokenizer_name: Optional[str] = field(default=None)
 
-    vocab_path = args.tokenizer
-    if os.path.isdir(vocab_path):
-        vocab_path = os.path.join(vocab_path, "vocab.txt")
-    tokenizer = ExpressionBertTokenizer(vocab_path)
-    dataset = load_dataset(args.dataset)
 
-    collator = Collator(tokenizer)
-    val_size = max(1, int(args.val_split * len(dataset)))
+@dataclass
+class DataArguments:
+    dataset_path: str = field(metadata={"help": "Path to prepared dataset"})
+    val_split: float = field(default=0.2)
+    training_config_path: Optional[str] = field(default=None)
+    plm_probability: float = field(default=1 / 6)
+    max_span_length: int = field(default=5)
+
+
+def main():
+    parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
+    model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+
+    tokenizer_path = model_args.tokenizer_name or model_args.model_name_or_path
+    tokenizer = ExpressionBertTokenizer.from_pretrained(tokenizer_path)
+
+    dataset = load_dataset(data_args.dataset_path)
+    val_size = max(1, int(data_args.val_split * len(dataset)))
     train_size = len(dataset) - val_size
     train_ds, val_ds = random_split(dataset, [train_size, val_size])
 
-    train_loader = DataLoader(
-        train_ds, batch_size=args.batch_size, shuffle=True, collate_fn=collator
-    )
-    val_loader = DataLoader(
-        val_ds, batch_size=args.batch_size, shuffle=False, collate_fn=collator
+    train_config: Dict[str, Any] = {}
+    if data_args.training_config_path:
+        with open(data_args.training_config_path) as f:
+            train_config = json.load(f)
+
+    if train_config.get("alternate_tasks", False):
+        base_pp = TRAIN_COLLATORS["property"](
+            tokenizer=tokenizer,
+            property_tokens=train_config["property_tokens"],
+            num_tokens_to_mask=train_config.get("num_tokens_to_mask", None),
+            mask_token_order=train_config.get("mask_token_order", None),
+        )
+        base_cg = TRAIN_COLLATORS[train_config["cg_collator"]](
+            tokenizer=tokenizer, **train_config["cg_collator_params"]
+        )
+        data_collator = EmbeddingCollator(base_pp)
+        alternating_collator = EmbeddingCollator(base_cg)
+    else:
+        task = train_config.get("task", "proponly")
+        if task == "gen_only":
+            base = TRAIN_COLLATORS[train_config["cg_collator"]](
+                tokenizer=tokenizer, **train_config["cg_collator_params"]
+            )
+        elif task == "plm":
+            from transformers import DataCollatorForPermutationLanguageModeling
+
+            base = DataCollatorForPermutationLanguageModeling(
+                tokenizer=tokenizer,
+                plm_probability=data_args.plm_probability,
+                max_span_length=data_args.max_span_length,
+            )
+        else:  # proponly
+            base = TRAIN_COLLATORS["property"](
+                tokenizer=tokenizer,
+                property_tokens=train_config.get("property_tokens", ["<pic50>"]),
+                num_tokens_to_mask=train_config.get("num_tokens_to_mask", None),
+                mask_token_order=train_config.get("mask_token_order", None),
+            )
+        data_collator = EmbeddingCollator(base)
+        alternating_collator = None
+
+    model = RegressionTransformer(model_args.model_name_or_path, tokenizer)
+
+    custom_trainer_params = get_trainer_dict({})
+    trainer = CustomTrainer(
+        model=model,
+        args=training_args,
+        data_collator=data_collator,
+        train_dataset=train_ds,
+        eval_dataset=val_ds,
+        tokenizer=tokenizer,
+        alternating_collator=alternating_collator,
+        train_config=train_config,
+        **custom_trainer_params,
     )
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = RegressionTransformer(args.model, tokenizer).to(device)
+    trainer.train()
 
-    optimizer = torch.optim.AdamW(
-        model.parameters(), lr=args.lr, weight_decay=args.weight_decay
-    )
-    total_steps = len(train_loader) * args.epochs
-    scheduler = get_linear_schedule_with_warmup(
-        optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=total_steps
-    )
-    loss_fn = nn.MSELoss()
-
-    best_rmse = math.inf
-    os.makedirs(args.output, exist_ok=True)
-
-    for epoch in range(args.epochs):
-        model.train()
-        for enc, cemb, pemb, labels in train_loader:
-            enc = {k: v.to(device) for k, v in enc.items()}
-            cemb = cemb.to(device)
-            pemb = pemb.to(device)
-            labels = labels.to(device)
-            output = model(**enc, complex_emb=cemb, protein_emb=pemb)
-            preds = decode_property(output.logits, enc["input_ids"], tokenizer)
-            loss = loss_fn(preds, labels)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
-
-        model.eval()
-        preds, labs = [], []
-        with torch.no_grad():
-            for enc, cemb, pemb, labels in val_loader:
-                enc = {k: v.to(device) for k, v in enc.items()}
-                cemb = cemb.to(device)
-                pemb = pemb.to(device)
-                output = model(**enc, complex_emb=cemb, protein_emb=pemb)
-                pred_vals = decode_property(output.logits, enc["input_ids"], tokenizer)
-                preds.extend(pred_vals.cpu().tolist())
-                labs.extend(labels.tolist())
-        rmse = math.sqrt(sum((p - l) ** 2 for p, l in zip(preds, labs)) / len(labs))
-        if rmse < best_rmse:
-            best_rmse = rmse
-            torch.save(model.state_dict(), os.path.join(args.output, "best_model.pt"))
-        print(f"Epoch {epoch+1}/{args.epochs} RMSE: {rmse:.4f} (best {best_rmse:.4f})")
-
-
-def get_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Fine-tune Regression Transformer on DiffDock dataset"
-    )
-    parser.add_argument(
-        "dataset",
-        help="Path to dataset file created with create_regression_transformer_input.py",
-    )
-    parser.add_argument("output", help="Directory to store checkpoints")
-    parser.add_argument(
-        "--model",
-        default="models/Diffdock_RT",
-        help="Path to pretrained Regression Transformer model",
-    )
-    parser.add_argument(
-        "--tokenizer",
-        default="models/Diffdock_RT",
-        help="Directory containing the tokenizer vocabulary",
-    )
-    parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--epochs", type=int, default=5)
-    parser.add_argument("--lr", type=float, default=1e-4)
-    parser.add_argument("--weight_decay", type=float, default=0.0)
-    parser.add_argument("--warmup_steps", type=int, default=0)
-    parser.add_argument("--val_split", type=float, default=0.2)
-    return parser
+    if training_args.output_dir is not None:
+        trainer.save_model(training_args.output_dir)
 
 
 if __name__ == "__main__":
-    parser = get_parser()
-    args = parser.parse_args()
-    train(args)
+    main()
