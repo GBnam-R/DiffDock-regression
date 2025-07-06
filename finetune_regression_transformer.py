@@ -160,6 +160,11 @@ def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
+    if training_args.local_rank != -1 and not torch.distributed.is_initialized():
+        backend = "nccl" if torch.cuda.is_available() else "gloo"
+        torch.distributed.init_process_group(backend=backend)
+        torch.cuda.set_device(training_args.local_rank)
+
     tokenizer_path = model_args.tokenizer_name or model_args.model_name_or_path
     tokenizer = ExpressionBertTokenizer.from_pretrained(tokenizer_path)
 
